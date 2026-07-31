@@ -1,6 +1,6 @@
 [package]
-name        = "trace-task"
-description = "Serializable task management for trace:: agentic pipelines"
+name        = "tracers-core"
+description = "Core Trace<T> type — reasoning provenance as a first-class value"
 version.workspace    = true
 edition.workspace    = true
 authors.workspace    = true
@@ -8,7 +8,6 @@ license.workspace    = true
 repository.workspace = true
 
 [dependencies]
-trace-core = { path = "../trace-core" }
 serde      = { workspace = true }
 serde_json = { workspace = true }
 uuid       = { workspace = true }

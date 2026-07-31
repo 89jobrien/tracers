@@ -10,12 +10,12 @@ This repository contains the `trace::` language design and a Rust reference impl
 
 ## crates
 
-| crate           | description                                                     |
-| --------------- | --------------------------------------------------------------- |
-| `trace-core`    | `Trace<T>`, `Step`, `Span`, `Branch`, `TraceErr`                |
-| `trace-task`    | `Task`, `TaskStatus`, `Priority`, `TaskRegistry`                |
-| `trace-agent`   | `Agent` trait, `spawn`/`delegate`, lifecycle escalation hooks   |
-| `trace-runtime` | `AgentRegistry`, `run_with_escalation`, `join_all`, `speculate` |
+| crate             | description                                                     |
+| ----------------- | --------------------------------------------------------------- |
+| `tracers-core`    | `Trace<T>`, `Step`, `Span`, `Branch`, `TraceErr`                |
+| `tracers-task`    | `Task`, `TaskStatus`, `Priority`, `TaskRegistry`                |
+| `tracers-agent`   | `Agent` trait, `spawn`/`delegate`, lifecycle escalation hooks   |
+| `tracers-runtime` | `AgentRegistry`, `run_with_escalation`, `join_all`, `speculate` |
 
 ---
 
@@ -45,7 +45,7 @@ t.low_confidence()     // where were we uncertain?
 Tasks in `trace::` are serializable first-class values. `TaskStatus::Done` carries a `TraceRef` — a stable pointer back to the execution trace that produced the result. No output is ever detached from its provenance.
 
 ```rust
-use trace_task::{Task, TaskRegistry, Priority};
+use tracers_task::{Task, TaskRegistry, Priority};
 
 let mut registry = TaskRegistry::new();
 
@@ -101,14 +101,14 @@ Key differences from a Rust `fn`:
 | escalation rules | no      | yes (`on_*`)    |
 | reasoning log    | no      | always-on       |
 
-### the `trace-agent` crate
+### the `tracers-agent` crate
 
 The `Agent` trait, `spawn`, and `delegate` are implemented today as a real (async-trait–backed) Rust API — not just language design:
 
 ```rust
 use async_trait::async_trait;
-use trace_agent::{Agent, AgentContext, EscalationAction, spawn, delegate};
-use trace_core::Trace;
+use tracers_agent::{Agent, AgentContext, EscalationAction, spawn, delegate};
+use tracers_core::Trace;
 
 struct Coder;
 
@@ -138,12 +138,12 @@ impl Agent for Coder {
 
 `spawn()` runs the agent and evaluates its lifecycle hooks against the resulting trace — budget exhaustion, step failure, and low confidence each resolve to an `EscalationAction` the caller can act on. `delegate()` does the same but extends the caller's `delegation_chain`, so a multi-agent handoff is always reconstructable from `AgentContext::delegation_chain`.
 
-### the `trace-runtime` crate
+### the `tracers-runtime` crate
 
-`EscalationAction::Delegate("SeniorCoder")` is just a name — resolving it into a live agent and actually running it is a runtime concern. `trace-runtime` adds:
+`EscalationAction::Delegate("SeniorCoder")` is just a name — resolving it into a live agent and actually running it is a runtime concern. `tracers-runtime` adds:
 
 ```rust
-use trace_runtime::{AgentRegistry, run_with_escalation, join_all, speculate};
+use tracers_runtime::{AgentRegistry, run_with_escalation, join_all, speculate};
 use std::sync::Arc;
 
 // resolve escalations against a registry, hopping up to a limit
@@ -213,7 +213,7 @@ pick_best(|plans| plans.max_by(|p| p.confidence))
 ## related work
 
 - `agent_trace` — Joe's personal traced agentic execution crate (the design inspiration for `Trace<T>`)
-- `doob` — agent-first task CLI that `trace-task` could back
+- `doob` — agent-first task CLI that `tracers-task` could back
 - `orca-strait` — parallel TDD sub-agent orchestrator that could consume `TaskRegistry`
 - LangGraph, CrewAI — graph-based agentic frameworks; `trace::` differs by making provenance first-class at the type level rather than at the runtime level
 
@@ -221,7 +221,7 @@ pick_best(|plans| plans.max_by(|p| p.confidence))
 
 ## status
 
-Early design + reference implementation. `trace-core` and `trace-task` compile and are usable as Rust libraries today. The `trace::` surface syntax and compiler are design artifacts — contributions and discussion welcome.
+Early design + reference implementation. `tracers-core` and `tracers-task` compile and are usable as Rust libraries today. The `trace::` surface syntax and compiler are design artifacts — contributions and discussion welcome.
 
 ## license
 

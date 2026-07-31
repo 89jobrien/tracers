@@ -1,4 +1,4 @@
-//! `trace-task` — serializable task management for trace:: agentic pipelines.
+//! `tracers-task` — serializable task management for trace:: agentic pipelines.
 //!
 //! Tasks in trace:: are not strings or loose IDs. They are structured,
 //! versioned values with identity, status, priority, and dependency edges
@@ -12,7 +12,7 @@
 //! # Example
 //!
 //! ```rust
-//! use trace_task::{Task, TaskRegistry, Priority};
+//! use tracers_task::{Task, TaskRegistry, Priority};
 //!
 //! let mut registry = TaskRegistry::new();
 //!

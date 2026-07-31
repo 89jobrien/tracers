@@ -1,7 +1,7 @@
 use serde::Serialize;
 use std::sync::Arc;
-use trace_agent::{spawn, Agent};
-use trace_core::{Branch, Step, Trace};
+use tracers_agent::{Agent, spawn};
+use tracers_core::{Branch, Step, Trace};
 
 /// Run several candidate agents concurrently against the same input,
 /// pick a winner, and record the outcome as a single `speculate` step
@@ -21,9 +21,9 @@ use trace_core::{Branch, Step, Trace};
 /// over.
 ///
 /// ```rust
-/// use trace_agent::{Agent, AgentContext};
-/// use trace_core::{Step, Trace};
-/// use trace_runtime::speculate;
+/// use tracers_agent::{Agent, AgentContext};
+/// use tracers_core::{Step, Trace};
+/// use tracers_runtime::speculate;
 /// use async_trait::async_trait;
 /// use std::sync::Arc;
 ///
@@ -141,8 +141,8 @@ where
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use trace_agent::AgentContext;
-    use trace_core::TraceErr;
+    use tracers_agent::AgentContext;
+    use tracers_core::TraceErr;
 
     struct Scored(&'static str, f64);
 

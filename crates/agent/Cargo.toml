@@ -1,5 +1,5 @@
 [package]
-name        = "trace-agent"
+name        = "tracers-agent"
 description = "Agent trait, spawn/delegate, and lifecycle escalation hooks for trace::"
 version.workspace    = true
 edition.workspace    = true
@@ -8,9 +8,9 @@ license.workspace    = true
 repository.workspace = true
 
 [dependencies]
-trace-core  = { path = "../trace-core" }
-serde       = { workspace = true }
-async-trait = { workspace = true }
+tracers-core = { path = "../core" }
+serde        = { workspace = true }
+async-trait  = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }

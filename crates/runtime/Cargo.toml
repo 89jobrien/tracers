@@ -1,5 +1,5 @@
 [package]
-name        = "trace-runtime"
+name        = "tracers-runtime"
 description = "Agent registry, delegation resolution, parallel fan-out, and speculative branching for trace::"
 version.workspace    = true
 edition.workspace    = true
@@ -8,10 +8,10 @@ license.workspace    = true
 repository.workspace = true
 
 [dependencies]
-trace-core  = { path = "../trace-core" }
-trace-agent = { path = "../trace-agent" }
-serde       = { workspace = true }
-futures     = { workspace = true }
+tracers-core  = { path = "../core" }
+tracers-agent = { path = "../agent" }
+serde         = { workspace = true }
+futures       = { workspace = true }
 
 [dev-dependencies]
 tokio       = { workspace = true }

@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 /// on `finish()` or `Drop`. Mirrors the `agent_trace` crate's span pattern.
 ///
 /// ```rust
-/// use trace_core::Span;
+/// use tracers_core::Span;
 ///
 /// let span = Span::start("search");
 /// // ... do work ...

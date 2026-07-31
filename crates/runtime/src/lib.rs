@@ -1,7 +1,7 @@
-//! `trace-runtime` — agent registry, delegation resolution, parallel
+//! `tracers-runtime` — agent registry, delegation resolution, parallel
 //! fan-out, and speculative branching for trace:: pipelines.
 //!
-//! `trace-agent` defines *what* an agent should do when it needs to
+//! `tracers-agent` defines *what* an agent should do when it needs to
 //! escalate (`EscalationAction::Delegate("SeniorCoder")`), but
 //! resolving a name into a live agent and actually running it is a
 //! runtime concern — that's what this crate adds:
@@ -13,7 +13,7 @@
 //! - [`join_all`] — runs one agent concurrently over many inputs
 //! - [`speculate`] — runs several *different* candidate agents
 //!   concurrently over the same input and picks a winner by confidence,
-//!   recording the losers as rejected [`trace_core::Branch`]es
+//!   recording the losers as rejected [`tracers_core::Branch`]es
 //!
 //! # Known limitation
 //!
@@ -29,7 +29,7 @@ pub mod join;
 pub mod registry;
 pub mod speculate;
 
-pub use execute::{run_with_escalation, RunOutcome};
+pub use execute::{RunOutcome, run_with_escalation};
 pub use join::join_all;
 pub use registry::AgentRegistry;
 pub use speculate::speculate;

@@ -1,7 +1,7 @@
 use crate::agent::Agent;
 use crate::context::AgentContext;
 use crate::hooks::EscalationAction;
-use trace_core::{Trace, TraceErr};
+use tracers_core::{Trace, TraceErr};
 
 /// The result of running an agent via [`spawn`] or [`delegate`].
 ///
@@ -13,7 +13,7 @@ use trace_core::{Trace, TraceErr};
 /// Generic over the output type alone (not the concrete `Agent`), so
 /// the same outcome type works whether the agent was invoked through a
 /// concrete `&A` or through a `&dyn Agent<Input = I, Output = O>` —
-/// see `trace-runtime`'s `AgentRegistry` for the latter.
+/// see `tracers-runtime`'s `AgentRegistry` for the latter.
 pub struct SpawnOutcome<O> {
     pub trace: Trace<O>,
     pub context: AgentContext,
@@ -93,7 +93,7 @@ fn evaluate<A: Agent + ?Sized>(agent: &A, trace: &Trace<A::Output>) -> Escalatio
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use trace_core::Step;
+    use tracers_core::Step;
 
     /// An agent whose budget is exhausted on the second `record_step()`
     /// call. Escalates to `Delegate("Fallback")`.

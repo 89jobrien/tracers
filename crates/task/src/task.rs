@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use trace_core::{TraceErr, TraceRef};
+use tracers_core::{TraceErr, TraceRef};
 use uuid::Uuid;
 
 /// A serializable, dependency-aware unit of work.

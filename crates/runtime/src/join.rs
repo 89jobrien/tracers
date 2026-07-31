@@ -1,4 +1,4 @@
-use trace_agent::{spawn, Agent, SpawnOutcome};
+use tracers_agent::{Agent, SpawnOutcome, spawn};
 
 /// Run `agent` concurrently against every input in `inputs`, collecting
 /// one [`SpawnOutcome`] per input in the original order.
@@ -10,9 +10,9 @@ use trace_agent::{spawn, Agent, SpawnOutcome};
 /// variant is tracked as future work.
 ///
 /// ```rust
-/// use trace_agent::{Agent, AgentContext};
-/// use trace_core::Trace;
-/// use trace_runtime::join_all;
+/// use tracers_agent::{Agent, AgentContext};
+/// use tracers_core::Trace;
+/// use tracers_runtime::join_all;
 /// use async_trait::async_trait;
 ///
 /// struct Doubler;

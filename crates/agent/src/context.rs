@@ -1,4 +1,4 @@
-use trace_core::TraceErr;
+use tracers_core::TraceErr;
 
 /// Per-run state threaded through [`crate::Agent::run`].
 ///
@@ -31,12 +31,12 @@ impl AgentContext {
     /// the declared budget.
     pub fn record_step(&mut self) -> Result<(), TraceErr> {
         self.steps_taken += 1;
-        if let Some(budget) = self.budget {
-            if self.steps_taken > budget {
-                return Err(TraceErr::BudgetExhausted {
-                    steps: self.steps_taken,
-                });
-            }
+        if let Some(budget) = self.budget
+            && self.steps_taken > budget
+        {
+            return Err(TraceErr::BudgetExhausted {
+                steps: self.steps_taken,
+            });
         }
         Ok(())
     }

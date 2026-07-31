@@ -2,7 +2,7 @@ use crate::context::AgentContext;
 use crate::hooks::EscalationAction;
 use async_trait::async_trait;
 use serde::Serialize;
-use trace_core::Trace;
+use tracers_core::Trace;
 
 /// The unit of computation in trace::.
 ///

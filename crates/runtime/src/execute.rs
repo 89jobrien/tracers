@@ -1,7 +1,7 @@
 use crate::registry::AgentRegistry;
 use serde::Serialize;
-use trace_agent::{delegate, spawn, Agent, AgentContext, EscalationAction, SpawnOutcome};
-use trace_core::Trace;
+use tracers_agent::{Agent, AgentContext, EscalationAction, SpawnOutcome, delegate, spawn};
+use tracers_core::Trace;
 
 /// Outcome of [`run_with_escalation`] — a run that may have hopped
 /// across multiple agents via delegation before settling.
@@ -26,9 +26,9 @@ pub struct RunOutcome<O> {
 /// task with a different agent, not continue from partial output.
 ///
 /// ```rust
-/// use trace_runtime::{AgentRegistry, run_with_escalation};
-/// use trace_agent::{Agent, AgentContext, EscalationAction};
-/// use trace_core::Trace;
+/// use tracers_runtime::{AgentRegistry, run_with_escalation};
+/// use tracers_agent::{Agent, AgentContext, EscalationAction};
+/// use tracers_core::Trace;
 /// use async_trait::async_trait;
 /// use std::sync::Arc;
 ///
@@ -41,7 +41,7 @@ pub struct RunOutcome<O> {
 ///     fn goal(&self) -> &str { "attempt the task, escalate on failure" }
 ///     async fn run(&self, input: u32, ctx: &mut AgentContext) -> Trace<u32> {
 ///         ctx.record_step().unwrap();
-///         Trace::failed(trace_core::TraceErr::other("out of my depth"))
+///         Trace::failed(tracers_core::TraceErr::other("out of my depth"))
 ///     }
 ///     fn on_step_failure(&self) -> EscalationAction {
 ///         EscalationAction::Delegate("Senior".to_string())
@@ -97,7 +97,7 @@ where
                     trace,
                     context,
                     unresolved: None,
-                }
+                };
             }
         };
 
@@ -130,7 +130,7 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
     use std::sync::Arc;
-    use trace_core::TraceErr;
+    use tracers_core::TraceErr;
 
     /// Always fails and always escalates to "Loop" — used to force the
     /// delegation loop to keep going so we can test `max_hops`.

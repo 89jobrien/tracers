@@ -2,7 +2,7 @@ use crate::task::Task;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
-use trace_core::TraceErr;
+use tracers_core::TraceErr;
 use uuid::Uuid;
 
 /// The runtime task graph.
@@ -48,7 +48,7 @@ impl TaskRegistry {
     pub fn complete(
         &mut self,
         id: Uuid,
-        trace_ref: trace_core::TraceRef,
+        trace_ref: tracers_core::TraceRef,
         checkpoint: impl AsRef<Path>,
     ) -> Result<(), TraceErr> {
         if let Some(task) = self.tasks.get_mut(&id) {
@@ -70,7 +70,7 @@ impl TaskRegistry {
     /// All tasks, sorted by priority descending.
     pub fn all_by_priority(&self) -> Vec<&Task> {
         let mut tasks: Vec<&Task> = self.tasks.values().collect();
-        tasks.sort_by(|a, b| b.priority.cmp(&a.priority));
+        tasks.sort_by_key(|t| std::cmp::Reverse(t.priority));
         tasks
     }
 

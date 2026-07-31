@@ -1,0 +1,16 @@
+[package]
+name        = "tracers-task"
+description = "Serializable task management for trace:: agentic pipelines"
+version.workspace    = true
+edition.workspace    = true
+authors.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[dependencies]
+tracers-core = { path = "../core" }
+serde        = { workspace = true }
+serde_json   = { workspace = true }
+uuid         = { workspace = true }
+chrono       = { workspace = true }
+thiserror    = { workspace = true }

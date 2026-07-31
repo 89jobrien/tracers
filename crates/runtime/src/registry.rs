@@ -1,7 +1,7 @@
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
-use trace_agent::Agent;
+use tracers_agent::Agent;
 
 /// A runtime lookup table from agent name to a live [`Agent`] instance.
 ///
@@ -13,9 +13,9 @@ use trace_agent::Agent;
 /// shape as the agent that escalated to it.
 ///
 /// ```rust
-/// use trace_runtime::AgentRegistry;
-/// use trace_agent::{Agent, AgentContext};
-/// use trace_core::Trace;
+/// use tracers_runtime::AgentRegistry;
+/// use tracers_agent::{Agent, AgentContext};
+/// use tracers_core::Trace;
 /// use async_trait::async_trait;
 /// use std::sync::Arc;
 ///
