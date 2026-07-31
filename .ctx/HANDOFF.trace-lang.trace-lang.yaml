@@ -1,0 +1,83 @@
+project: trace-lang
+updated: 20260731.020000
+
+items:
+  - id: h003
+    title: wire trace-task into doob
+    description: >
+      Explore using TaskRegistry as the storage backend for doob todos.
+      The serialization contract and dependency graph are already compatible.
+    priority: P2
+    status: open
+    files:
+      - crates/trace-task/src/registry.rs
+
+  - id: h005
+    title: trace-cli — checkpoint inspector
+    description: >
+      A doob-style CLI for inspecting .trace.json checkpoint files.
+      Commands: list, show <task-id>, chain <trace-ref>, diff <ref1> <ref2>.
+    priority: P3
+    status: open
+    files:
+      - crates/trace-cli/
+
+  - id: h006
+    title: thread-parallel join_all / speculate
+    description: >
+      Current join_all and speculate use futures::future::join_all —
+      concurrent on one task, not distributed across OS threads. A
+      tokio::spawn-based variant needs 'static agents (Arc<dyn Agent<...>>
+      throughout) rather than borrowed &A. Split out of h002 since it's a
+      bigger API change than the registry-resolution work.
+    priority: P2
+    status: open
+    files:
+      - crates/trace-runtime/src/join.rs
+      - crates/trace-runtime/src/speculate.rs
+
+  - id: h007
+    title: shared step budget across concurrent branches
+    description: >
+      AgentContext::budget is per-run only. speculate and join_all give
+      each candidate/input its own independent budget. A SharedBudget
+      (e.g. Arc<AtomicUsize>) that caps total steps across all concurrent
+      branches needs a new optional field threaded through AgentContext
+      and record_step(). Split out of h002 — deferred, not silently
+      assumed to already work.
+    priority: P3
+    status: open
+    files:
+      - crates/trace-agent/src/context.rs
+
+log:
+  - session: 3
+    date: 20260731.020000
+    summary: >
+      added trace-runtime crate — AgentRegistry<I,O>, run_with_escalation
+      (delegation-resolution loop with max_hops), join_all (concurrent
+      fan-out), speculate (confidence-based winner selection with
+      rejected Branches). Refactored trace-agent's spawn/delegate to
+      accept `A: Agent + ?Sized` so the registry can dispatch through
+      dyn Agent without duplicating hook-evaluation logic. 5 unit tests +
+      4 doctests, all passing; caught and fixed a real tie-breaking bug
+      (Iterator::max_by returns the LAST element on ties, not the first)
+      via the unit tests, not by inspection. Zero clippy warnings, fmt
+      clean, verified via two independent from-scratch clone rebuilds.
+      Closed h002 and h004; split their unimplemented scope into h006
+      (thread parallelism) and h007 (shared budget).
+    commits: []
+
+  - session: 2
+    date: 20260731.010000
+    summary: >
+      added trace-agent crate — Agent trait (async-trait), AgentContext
+      with budget tracking, EscalationAction, spawn()/delegate() with
+      shared hook-evaluation logic. 5 unit tests + 1 doctest, zero
+      clippy warnings, cargo fmt clean. closed h001.
+    commits: []
+
+  - session: 1
+    date: 20260731.000000
+    summary: initial repo scaffold — trace-core and trace-task crates, README, CLAUDE.md
+    commits: []

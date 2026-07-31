@@ -1,0 +1,10 @@
+/target
+Cargo.lock
+
+# trace:: checkpoint files (generated at runtime)
+*.trace.json
+
+# atelier / ctx — generated, not committed (except HANDOFF yaml)
+.ctx/*
+!.ctx/HANDOFF.*.yaml
+.ctx/HANDOFF.*.state.yaml
