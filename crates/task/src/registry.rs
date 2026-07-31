@@ -1,16 +1,18 @@
+use crate::checkpoint::CheckpointStore;
 use crate::task::Task;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::Path;
 use tracers_core::TraceErr;
 use uuid::Uuid;
 
 /// The runtime task graph.
 ///
-/// `TaskRegistry` owns all tasks, resolves dependency ordering, and
-/// serializes checkpoints to disk after every state transition. A
-/// crashed executor can call `TaskRegistry::load()` to resume exactly
-/// where it left off — no task is ever re-run unnecessarily.
+/// `TaskRegistry` owns all tasks and resolves dependency ordering. It
+/// checkpoints itself through a [`CheckpointStore`] after every state
+/// transition, so a crashed executor can restore from the same store to
+/// resume exactly where it left off — no task is ever re-run unnecessarily.
+/// `TaskRegistry` has no idea whether that store is a file, a database, or
+/// an in-memory buffer.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskRegistry {
     tasks: HashMap<Uuid, Task>,
@@ -23,10 +25,9 @@ impl TaskRegistry {
         }
     }
 
-    /// Restore a registry from a checkpoint file.
-    pub fn load(path: impl AsRef<Path>) -> Result<Self, TraceErr> {
-        let raw = std::fs::read_to_string(path)
-            .map_err(|e| TraceErr::other(format!("could not read checkpoint: {e}")))?;
+    /// Restore a registry from a checkpoint store.
+    pub fn load(store: &impl CheckpointStore) -> Result<Self, TraceErr> {
+        let raw = store.load()?;
         serde_json::from_str(&raw).map_err(|e| TraceErr::Serde(e.to_string()))
     }
 
@@ -49,12 +50,12 @@ impl TaskRegistry {
         &mut self,
         id: Uuid,
         trace_ref: tracers_core::TraceRef,
-        checkpoint: impl AsRef<Path>,
+        store: &impl CheckpointStore,
     ) -> Result<(), TraceErr> {
         if let Some(task) = self.tasks.get_mut(&id) {
             task.complete(trace_ref);
         }
-        self.save(checkpoint)
+        self.save(store)
     }
 
     // ── Querying ──────────────────────────────────────────────────────────────
@@ -92,13 +93,12 @@ impl TaskRegistry {
 
     // ── Serialization ─────────────────────────────────────────────────────────
 
-    /// Persist the full registry to disk. Called after every task
+    /// Persist the full registry through `store`. Called after every task
     /// transition so the pipeline is always resumable.
-    pub fn save(&self, path: impl AsRef<Path>) -> Result<(), TraceErr> {
+    pub fn save(&self, store: &impl CheckpointStore) -> Result<(), TraceErr> {
         let json =
             serde_json::to_string_pretty(self).map_err(|e| TraceErr::Serde(e.to_string()))?;
-        std::fs::write(path, json)
-            .map_err(|e| TraceErr::other(format!("could not write checkpoint: {e}")))
+        store.save(&json)
     }
 
     // ── Internal helpers ──────────────────────────────────────────────────────

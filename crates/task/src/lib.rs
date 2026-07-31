@@ -27,8 +27,10 @@
 //! assert_eq!(ready.len(), 1);
 //! ```
 
+pub mod checkpoint;
 pub mod registry;
 pub mod task;
 
+pub use checkpoint::{CheckpointStore, FileCheckpointStore};
 pub use registry::TaskRegistry;
 pub use task::{Priority, Task, TaskStatus};

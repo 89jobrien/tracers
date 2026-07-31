@@ -25,6 +25,9 @@ crates/
 - `Trace<T>` is not a logging concern — it is a _value type_ that carries provenance as data
 - `TaskStatus::Done(TraceRef)` links every completed task to its execution trace
 - `TaskRegistry::save()` is called after every state transition — crash recovery is always possible
+- `TaskRegistry` persists through the `CheckpointStore` trait (`crates/task/src/checkpoint/`), never
+  `std::fs` directly — `FileCheckpointStore` is one adapter among possible others (S3, a database, an
+  in-memory buffer for tests), keeping the domain crate free of concrete I/O per the hexagonal rule below
 - Errors are `TraceErr` variants, never panics. The `?` operator propagates `TraceErr` through traces
 - All types are `Serialize + Deserialize` — this is a compile-time constraint, not a convention
 - `Agent::run` uses `async-trait` for object-safety; lifecycle hooks (`on_low_confidence`,

@@ -62,12 +62,18 @@ let ready = registry.ready_tasks();
 The registry checkpoints after every task completion:
 
 ```rust
+use tracers_task::FileCheckpointStore;
+
+let store = FileCheckpointStore::new("./checkpoint.trace.json");
+
 // after each task completes, save state
-registry.complete(task.id, trace_ref, "./checkpoint.trace.json")?;
+registry.complete(task.id, trace_ref, &store)?;
 
 // resume a crashed executor — no task is re-run unnecessarily
-let registry = TaskRegistry::load("./checkpoint.trace.json")?;
+let registry = TaskRegistry::load(&store)?;
 ```
+
+`TaskRegistry` only depends on the `CheckpointStore` trait — swap `FileCheckpointStore` for any other backend (S3, a database, an in-memory buffer for tests) without touching registry code.
 
 ---
 
