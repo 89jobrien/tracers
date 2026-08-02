@@ -1,0 +1,107 @@
+[workspace]
+# root = "/path/to/workspace"  # defaults to Cargo.toml location
+crates = [
+  { dir = "crates/core", pkg = "tracers-core" },
+  { dir = "crates/task", pkg = "tracers-task" },
+  { dir = "crates/agent", pkg = "tracers-agent" },
+  { dir = "crates/runtime", pkg = "tracers-runtime" },
+]
+# offline_skip = "test(/.*network.*/)"
+
+
+[[workspace.propagation]]
+source = "tracers-agent"
+dependents = ["tracers-runtime"]
+
+[[workspace.propagation]]
+source = "tracers-core"
+dependents = ["tracers-task", "tracers-agent", "tracers-runtime"]
+
+[protocol]
+# lockfile = "taskit-protocol.lock"
+
+[[protocol.surfaces]]
+name = "tracers-agent-agent"
+path = "crates/agent/src/agent.rs"
+
+[[protocol.surfaces]]
+name = "tracers-core-error"
+path = "crates/core/src/error.rs"
+
+# Coverage enforcement: run `taskit coverage` to check.
+#
+# [coverage]
+# crate_name = "my-crate"
+# threshold = 80.0
+
+[ci]
+# cruxfile  = "Cruxfile"  # path to Cruxfile for crux-based pipelines
+# fail_fast = false        # stop on first failing step
+
+[[ci.steps]]
+name = "self-check"
+cmd = "self-check"
+gate = true
+
+[[ci.steps]]
+name = "fmt --check"
+cmd = "fmt --check"
+gate = false
+
+[[ci.steps]]
+name = "lint"
+cmd = "lint"
+gate = false
+
+[[ci.steps]]
+name = "compile-tests"
+cmd = "compile-tests"
+gate = false
+
+[[ci.steps]]
+name = "test"
+cmd = "test"
+gate = false
+
+[[ci.steps]]
+name = "check-deps"
+cmd = "check-deps"
+gate = false
+
+[[ci.steps]]
+name = "check-protocol-drift"
+cmd = "check-protocol-drift"
+gate = false
+
+# Metric thresholds for `taskit inspect`. CLI flags override these.
+#
+# [inspect]
+# max_clippy_warnings = 0
+# max_clippy_errors   = 0
+# max_test_failures   = 0
+# max_todo_fixme      = 20   # omit to skip the TODO/FIXME check
+
+# Default retention policy for `taskit clean`. CLI --older-than overrides.
+#
+# [clean]
+# older_than = "7d"  # use `cargo sweep`; omit to run `cargo clean`
+
+# Git flow: main -> develop (work) -> staging (integration) -> release (publish) -> main
+# These are the defaults; uncomment to customize branch names.
+#
+# [flow]
+# main = "main"
+# develop = "develop"
+# staging = "staging"
+# release = "release"
+
+[release]
+# github_repo = "owner/repo"  # auto-detected from git remote
+publish_order = [
+  "tracers-core",
+  "tracers-agent",
+  "tracers-task",
+  "tracers-runtime",
+]
+# skip_docs   = false  # skip `cargo doc` before publishing
+# allow_dirty = false  # publish with uncommitted changes

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "algorithm": "sha256-normalized-core-contract-v1",
+  "surfaces": [
+    {
+      "name": "tracers-agent-agent",
+      "path": "crates/agent/src/agent.rs",
+      "hash": "533b90011dc0b9ca17e9bf896e53adc2e7a31e23fefbf4403906bfd562acb7a2"
+    },
+    {
+      "name": "tracers-core-error",
+      "path": "crates/core/src/error.rs",
+      "hash": "56cfe9a1fb850c1681c9d64fa6df31e2848ec6582d9847240e27638d04f061ed"
+    }
+  ]
+}

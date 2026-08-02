@@ -3,7 +3,10 @@
 
 mod fs;
 
-#[cfg(test)]
+/// Shared contract tests for `CheckpointStore` implementations — used by
+/// this crate's own tests and by downstream crates' tests (via the
+/// `test-support` feature) to verify their own impls conform.
+#[cfg(any(test, feature = "test-support"))]
 pub mod conformance;
 
 pub use fs::FileCheckpointStore;
