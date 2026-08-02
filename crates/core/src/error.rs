@@ -1,3 +1,4 @@
+use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use thiserror::Error;
@@ -7,38 +8,49 @@ use uuid::Uuid;
 /// There are no silent panics — a failing step always produces a `TraceErr`
 /// that propagates via `?` exactly like `Result<T, E>`, but is logged at
 /// every propagation point.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Error)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Error, Diagnostic)]
 pub enum TraceErr {
     /// A step called `reject()` — the branch was explicitly abandoned.
     #[error("rejected: {0}")]
+    #[diagnostic(code(trace::rejected))]
     Rejected(String),
 
     /// An external tool call returned an error.
     #[error("tool failed: {tool} — {message}")]
+    #[diagnostic(code(trace::tool_failed))]
     ToolFailed { tool: String, message: String },
 
     /// The agent exceeded its declared step budget.
     #[error("budget exhausted after {steps} steps")]
+    #[diagnostic(
+        code(trace::budget_exhausted),
+        help("increase the agent's declared step budget")
+    )]
     BudgetExhausted { steps: usize },
 
     /// A delegated agent returned an error. The inner UUID is that agent's trace id.
     #[error("delegation failed (trace {trace_id}): {message}")]
+    #[diagnostic(code(trace::delegation_failed))]
     DelegationFailed { trace_id: Uuid, message: String },
 
     /// A step's confidence score fell below the agent's declared threshold.
     #[error("confidence too low: {score:.2} (threshold {threshold:.2})")]
+    #[diagnostic(code(trace::low_confidence))]
     LowConfidence { score: f64, threshold: f64 },
 
     /// A step exceeded its time limit.
     #[error("step timed out after {duration:?}")]
+    #[diagnostic(code(trace::timeout))]
     Timeout { duration: Duration },
 
     /// Serialization/deserialization failure (task or trace checkpoint).
     #[error("serialization error: {0}")]
+    #[diagnostic(code(trace::serde))]
     Serde(String),
 
     /// Catch-all for errors that don't fit the above.
     #[error("{0}")]
+    #[diagnostic(code(trace::other))]
     Other(String),
 }
 
@@ -56,5 +68,16 @@ impl TraceErr {
 
     pub fn other(message: impl Into<String>) -> Self {
         Self::Other(message.into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn trace_err_is_a_miette_diagnostic() {
+        fn assert_diagnostic<T: miette::Diagnostic>() {}
+        assert_diagnostic::<TraceErr>();
     }
 }
