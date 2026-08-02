@@ -3,6 +3,9 @@
 
 mod fs;
 
+#[cfg(test)]
+pub mod conformance;
+
 pub use fs::FileCheckpointStore;
 
 use tracers_core::TraceErr;

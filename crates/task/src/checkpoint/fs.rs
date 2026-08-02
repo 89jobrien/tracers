@@ -26,3 +26,18 @@ impl CheckpointStore for FileCheckpointStore {
             .map_err(|e| TraceErr::other(format!("could not write checkpoint: {e}")))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::checkpoint::conformance::assert_checkpoint_store_contract;
+
+    #[test]
+    fn file_checkpoint_store_conforms_to_checkpoint_store_contract() {
+        let path =
+            std::env::temp_dir().join(format!("tracers-conformance-{}.json", uuid::Uuid::new_v4()));
+        let store = FileCheckpointStore::new(&path);
+        assert_checkpoint_store_contract(&store);
+        std::fs::remove_file(&path).ok();
+    }
+}
