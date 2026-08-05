@@ -1,0 +1,43 @@
+project: tracers
+id: tracers
+updated: 2026-08-03
+items:
+- id: uncommitted-work
+  doob_uuid: null
+  name: uncommitted-work
+  priority: P1
+  status: open
+  title: Uncommitted changes (12 files)
+  description: |-
+    Working tree has uncommitted changes:
+    .ctx/HANDOFF.trace-lang.trace-lang.yaml
+    Cargo.toml
+    .cargo/
+    .ctx/HANDOFF.tracers.tracers.yaml
+    .githooks/
+    .github/
+    .health-baseline.json
+    .taskit-cache/
+    Cruxfile
+    deny.toml
+    docs/
+    xtask/
+  files:
+  - .ctx/HANDOFF.trace-lang.trace-lang.yaml
+  - Cargo.toml
+  - .cargo/
+  - .ctx/HANDOFF.tracers.tracers.yaml
+  - .githooks/
+  - .github/
+  - .health-baseline.json
+  - .taskit-cache/
+  - Cruxfile
+  - deny.toml
+  - docs/
+  - xtask/
+  completed: null
+  extra: []
+log:
+- date: '20260802.030806'
+  summary: done=8 running=0 pending=0 blocked=0
+  commits: []

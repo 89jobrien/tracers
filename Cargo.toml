@@ -5,12 +5,13 @@ members = [
     "crates/task",
     "crates/agent",
     "crates/runtime",
+    "xtask",
 ]
 
 [workspace.package]
-version     = "0.1.0"
 edition     = "2024"
-authors     = ["Joe O'Brien <joe@89jobrien.dev>"]
+version     = "0.1.0"
+authors     = ["Joseph O'Brien <joseph.obrien@toptal.com>"]
 license     = "MIT OR Apache-2.0"
 repository  = "https://github.com/89jobrien/trace-lang"
 homepage    = "https://github.com/89jobrien/trace-lang"

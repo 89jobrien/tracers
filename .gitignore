@@ -1,5 +1,7 @@
 /target
 Cargo.lock
+.taskit-cache/
+/docs/dist/
 
 # trace:: checkpoint files (generated at runtime)
 *.trace.json

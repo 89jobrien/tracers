@@ -7,10 +7,20 @@ items:
     description: >
       Explore using TaskRegistry as the storage backend for doob todos.
       The serialization contract and dependency graph are already compatible.
+      Done: added tracers_adapter (Task<->Todo conversions) and
+      DoobCheckpointStore (bridges sync CheckpointStore to doob's async
+      TodoRepository via block_on) in doob-core, plus a shared
+      CheckpointStore conformance suite in tracers-task applied to both
+      FileCheckpointStore and DoobCheckpointStore. TraceErr also gained
+      a miette::Diagnostic derive as a prerequisite. Work lives on
+      doob's feat/tracers-task-checkpoint-store branch (not yet merged
+      or pushed) plus two commits on tracers main (9e20ff9, 66b12e1).
     priority: P2
-    status: open
+    status: done
     files:
-      - crates/trace-task/src/registry.rs
+      - crates/task/src/registry.rs
+      - crates/task/src/checkpoint/conformance.rs
+      - crates/core/src/error.rs
 
   - id: h005
     title: trace-cli — checkpoint inspector
