@@ -186,9 +186,11 @@ mod tests {
         }
     }
 
+    type Candidates = Vec<(String, Arc<dyn Agent<Input = (), Output = &'static str>>)>;
+
     #[tokio::test]
     async fn ties_keep_first_candidate_in_order() {
-        let candidates: Vec<(String, Arc<dyn Agent<Input = (), Output = &'static str>>)> = vec![
+        let candidates: Candidates = vec![
             ("first".to_string(), Arc::new(Scored("first answer", 0.5))),
             ("second".to_string(), Arc::new(Scored("second answer", 0.5))),
         ];
@@ -202,7 +204,7 @@ mod tests {
 
     #[tokio::test]
     async fn all_candidates_failing_still_returns_a_trace_with_branches() {
-        let candidates: Vec<(String, Arc<dyn Agent<Input = (), Output = &'static str>>)> = vec![
+        let candidates: Candidates = vec![
             ("a".to_string(), Arc::new(AlwaysFails("a"))),
             ("b".to_string(), Arc::new(AlwaysFails("b"))),
         ];
