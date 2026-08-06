@@ -8,6 +8,11 @@
 
 use super::CheckpointStore;
 
+/// Exercise a `CheckpointStore` impl against the shared contract: `load`
+/// before any `save` returns `Err`, and `save` round-trips (full-overwrite,
+/// not append/merge). Gated behind `test-support` so downstream crates can
+/// assert new impls (S3, DB, in-memory) conform without depending on this
+/// crate's `#[cfg(test)]` code.
 pub fn assert_checkpoint_store_contract<S: CheckpointStore>(store: &S) {
     // Round-trip: whatever was saved is exactly what loads back.
     store

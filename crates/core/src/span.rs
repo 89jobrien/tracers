@@ -11,11 +11,13 @@ use std::time::{Duration, Instant};
 /// let duration = span.finish();
 /// ```
 pub struct Span {
+    /// Label identifying the timed region.
     pub name: String,
     started: Instant,
 }
 
 impl Span {
+    /// Start timing a span named `name`, beginning immediately.
     pub fn start(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),

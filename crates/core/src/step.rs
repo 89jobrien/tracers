@@ -7,12 +7,17 @@ use uuid::Uuid;
 /// trace:: agent produces a `Step` that is appended to the `Trace<T>`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Step {
+    /// Unique identifier assigned via `Uuid::new_v4()` in `Step::named`.
     pub id: Uuid,
     pub name: String,
+    /// Confidence score in `[0.0, 1.0]`, clamped by `with_confidence`.
     pub confidence: Option<f64>,
     pub duration: Option<Duration>,
     pub started_at: DateTime<Utc>,
     pub outcome: StepOutcome,
+    /// Candidate paths considered for this step. Populated by `speculate`
+    /// with one `Branch` per candidate — the winner marked `Taken`, the
+    /// rest `Rejected`.
     pub branches: Vec<Branch>,
     pub notes: Option<String>,
 }
@@ -42,21 +47,25 @@ impl Step {
         }
     }
 
+    /// Builder: attach a confidence score, clamped into `[0.0, 1.0]`.
     pub fn with_confidence(mut self, confidence: f64) -> Self {
         self.confidence = Some(confidence.clamp(0.0, 1.0));
         self
     }
 
+    /// Builder: record how long the step took.
     pub fn with_duration(mut self, duration: Duration) -> Self {
         self.duration = Some(duration);
         self
     }
 
+    /// Builder: attach a free-text note.
     pub fn with_note(mut self, note: impl Into<String>) -> Self {
         self.notes = Some(note.into());
         self
     }
 
+    /// Builder: transition the step's outcome to `Rejected` with a reason.
     pub fn rejected(mut self, reason: impl Into<String>) -> Self {
         self.outcome = StepOutcome::Rejected {
             reason: reason.into(),
@@ -64,6 +73,7 @@ impl Step {
         self
     }
 
+    /// Builder: transition the step's outcome to `Failed` with a message.
     pub fn failed(mut self, message: impl Into<String>) -> Self {
         self.outcome = StepOutcome::Failed {
             message: message.into(),
@@ -71,10 +81,12 @@ impl Step {
         self
     }
 
+    /// True if this step's outcome is `Rejected`.
     pub fn is_rejected(&self) -> bool {
         matches!(self.outcome, StepOutcome::Rejected { .. })
     }
 
+    /// True if this step's outcome is `Failed`.
     pub fn is_failed(&self) -> bool {
         matches!(self.outcome, StepOutcome::Failed { .. })
     }
@@ -88,6 +100,8 @@ pub struct Branch {
     pub id: Uuid,
     pub label: String,
     pub outcome: BranchOutcome,
+    /// Confidence score in `[0.0, 1.0]`, e.g. `speculate`'s per-candidate
+    /// mean confidence.
     pub confidence: Option<f64>,
 }
 
@@ -100,6 +114,7 @@ pub enum BranchOutcome {
 }
 
 impl Branch {
+    /// Construct a `Branch` marked `Taken` — the winning candidate.
     pub fn taken(label: impl Into<String>) -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -109,6 +124,7 @@ impl Branch {
         }
     }
 
+    /// Construct a `Branch` marked `Rejected` with a reason — a losing candidate.
     pub fn rejected(label: impl Into<String>, reason: impl Into<String>) -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -120,6 +136,7 @@ impl Branch {
         }
     }
 
+    /// Builder: attach a confidence score, clamped into `[0.0, 1.0]`.
     pub fn with_confidence(mut self, confidence: f64) -> Self {
         self.confidence = Some(confidence.clamp(0.0, 1.0));
         self

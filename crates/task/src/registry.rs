@@ -19,6 +19,7 @@ pub struct TaskRegistry {
 }
 
 impl TaskRegistry {
+    /// Construct an empty registry.
     pub fn new() -> Self {
         Self {
             tasks: HashMap::new(),
@@ -33,14 +34,17 @@ impl TaskRegistry {
 
     // ── Mutation ──────────────────────────────────────────────────────────────
 
+    /// Insert a task, overwriting any existing task with the same `id`.
     pub fn insert(&mut self, task: Task) {
         self.tasks.insert(task.id, task);
     }
 
+    /// Mutably borrow a task by id.
     pub fn get_mut(&mut self, id: Uuid) -> Option<&mut Task> {
         self.tasks.get_mut(&id)
     }
 
+    /// Borrow a task by id.
     pub fn get(&self, id: Uuid) -> Option<&Task> {
         self.tasks.get(&id)
     }
@@ -61,6 +65,7 @@ impl TaskRegistry {
     // ── Querying ──────────────────────────────────────────────────────────────
 
     /// Tasks whose dependencies are all `Done` and whose status is `Pending`.
+    /// A task with an empty `depends_on` is vacuously satisfied.
     pub fn ready_tasks(&self) -> Vec<&Task> {
         self.tasks
             .values()
@@ -75,18 +80,22 @@ impl TaskRegistry {
         tasks
     }
 
+    /// All tasks with status `Pending`.
     pub fn pending(&self) -> Vec<&Task> {
         self.tasks.values().filter(|t| t.is_pending()).collect()
     }
 
+    /// All tasks with status `Done`.
     pub fn done(&self) -> Vec<&Task> {
         self.tasks.values().filter(|t| t.is_done()).collect()
     }
 
+    /// All tasks with status `Failed`.
     pub fn failed(&self) -> Vec<&Task> {
         self.tasks.values().filter(|t| t.is_failed()).collect()
     }
 
+    /// Total number of tasks in the registry.
     pub fn total(&self) -> usize {
         self.tasks.len()
     }

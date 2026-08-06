@@ -19,6 +19,10 @@ use tracers_core::TraceErr;
 /// mechanism — implement it for disk, S3, a database, or an in-memory
 /// buffer for tests.
 pub trait CheckpointStore {
+    /// Load the raw serialized checkpoint blob. Must return `Err`, not an
+    /// empty `Ok` or a panic, if no checkpoint has ever been saved.
     fn load(&self) -> Result<String, TraceErr>;
+    /// Persist `data` as the checkpoint blob. Full-overwrite semantics —
+    /// implementations must not append or merge with a prior checkpoint.
     fn save(&self, data: &str) -> Result<(), TraceErr>;
 }

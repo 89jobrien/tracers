@@ -8,6 +8,8 @@ pub struct FileCheckpointStore {
 }
 
 impl FileCheckpointStore {
+    /// Point a store at `path`. Doesn't touch the filesystem until
+    /// `save`/`load` is called.
     pub fn new(path: impl AsRef<Path>) -> Self {
         Self {
             path: path.as_ref().to_path_buf(),

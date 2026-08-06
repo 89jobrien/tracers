@@ -14,6 +14,7 @@ pub struct Task {
     pub title: String,
     pub goal: Option<String>,
     pub status: TaskStatus,
+    /// Determines scheduling order via `TaskRegistry::all_by_priority`.
     pub priority: Priority,
     /// Confidence estimate (0.0–1.0). Populated once an agent picks up
     /// the task and assesses it.
@@ -40,6 +41,13 @@ pub enum TaskStatus {
     Failed { error: TraceErr, trace: TraceRef },
 }
 
+/// Task scheduling priority.
+///
+/// Variant declaration order is load-bearing: `derive(PartialOrd, Ord)`
+/// ranks variants by position (`Low < Normal < High < Critical`), and
+/// `TaskRegistry::all_by_priority` relies on that ordering via
+/// `Reverse(t.priority)` to sort tasks highest-priority-first. Reordering
+/// these variants silently changes scheduling behavior.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Priority {
     Low,
@@ -60,6 +68,7 @@ impl std::fmt::Display for Priority {
 }
 
 impl Task {
+    /// Construct a `Task` with `Pending` status and `Normal` priority.
     pub fn new(title: impl Into<String>) -> Self {
         let now = Utc::now();
         Self {
@@ -78,16 +87,19 @@ impl Task {
 
     // ── Builder methods ───────────────────────────────────────────────────────
 
+    /// Builder: attach a goal description.
     pub fn with_goal(mut self, goal: impl Into<String>) -> Self {
         self.goal = Some(goal.into());
         self
     }
 
+    /// Builder: set the scheduling priority.
     pub fn with_priority(mut self, priority: Priority) -> Self {
         self.priority = priority;
         self
     }
 
+    /// Builder: attach a confidence estimate, clamped into `[0.0, 1.0]`.
     pub fn with_confidence(mut self, confidence: f64) -> Self {
         self.confidence = Some(confidence.clamp(0.0, 1.0));
         self
@@ -101,18 +113,26 @@ impl Task {
 
     // ── Status transitions ────────────────────────────────────────────────────
 
+    /// Assign the task to an agent and transition to `Running`.
+    ///
+    /// Every status transition (`assign_to`, `complete`, `fail`) bumps
+    /// `updated_at`; `complete` and `fail` additionally clear
+    /// `assigned_to` — a consistent side effect that isn't obvious from
+    /// the signatures alone.
     pub fn assign_to(&mut self, agent: impl Into<String>) {
         self.assigned_to = Some(agent.into());
         self.status = TaskStatus::Running;
         self.updated_at = Utc::now();
     }
 
+    /// Transition to `Done`, linking the completed execution trace.
     pub fn complete(&mut self, trace_ref: TraceRef) {
         self.status = TaskStatus::Done(trace_ref);
         self.assigned_to = None;
         self.updated_at = Utc::now();
     }
 
+    /// Transition to `Failed`, carrying the error and partial trace.
     pub fn fail(&mut self, error: TraceErr, trace_ref: TraceRef) {
         self.status = TaskStatus::Failed {
             error,
@@ -124,14 +144,17 @@ impl Task {
 
     // ── Status helpers ────────────────────────────────────────────────────────
 
+    /// True if the task's status is `Pending`.
     pub fn is_pending(&self) -> bool {
         self.status == TaskStatus::Pending
     }
 
+    /// True if the task's status is `Done`.
     pub fn is_done(&self) -> bool {
         matches!(self.status, TaskStatus::Done(_))
     }
 
+    /// True if the task's status is `Failed`.
     pub fn is_failed(&self) -> bool {
         matches!(self.status, TaskStatus::Failed { .. })
     }

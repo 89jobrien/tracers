@@ -25,6 +25,8 @@ impl std::fmt::Display for TraceRef {
 /// Traces are serializable so they can be checkpointed alongside `TaskRegistry`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Trace<T> {
+    /// Unique identifier, set on construction and exposed by `trace_ref()`
+    /// as a stable `TraceRef` for storage in a `Task`.
     pub id: Uuid,
     value: Option<T>,
     error: Option<TraceErr>,
@@ -61,28 +63,35 @@ impl<T: Clone + Serialize> Trace<T> {
 
     // ── Value access ──────────────────────────────────────────────────────────
 
+    /// Borrow the carried value, if the trace succeeded.
     pub fn value(&self) -> Option<&T> {
         self.value.as_ref()
     }
 
+    /// Consume the trace and take ownership of the carried value, if any.
     pub fn into_value(self) -> Option<T> {
         self.value
     }
 
+    /// Borrow the trace's error, if it failed.
     pub fn error(&self) -> Option<&TraceErr> {
         self.error.as_ref()
     }
 
+    /// True iff the trace carries a value, i.e. it didn't fail.
     pub fn is_ok(&self) -> bool {
         self.value.is_some()
     }
 
+    /// Wrap this trace's `id` into a `TraceRef` for storage in a `Task`.
     pub fn trace_ref(&self) -> TraceRef {
         TraceRef(self.id)
     }
 
     // ── Step management ───────────────────────────────────────────────────────
 
+    /// Append a step to the causal chain. The primary mutation point agents
+    /// call after each unit of work.
     pub fn push_step(&mut self, step: Step) {
         self.steps.push(step);
     }
@@ -120,6 +129,8 @@ impl<T: Clone + Serialize> Trace<T> {
         self.low_confidence_below(0.7)
     }
 
+    /// Steps whose confidence score is below an arbitrary `threshold`. Used
+    /// by `spawn`'s escalation check against `Agent::confidence_threshold`.
     pub fn low_confidence_below(&self, threshold: f64) -> Vec<&Step> {
         self.steps
             .iter()

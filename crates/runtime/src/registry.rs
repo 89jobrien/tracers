@@ -47,6 +47,7 @@ where
     I: Send,
     O: Clone + Serialize + Send,
 {
+    /// Construct an empty registry.
     pub fn new() -> Self {
         Self {
             agents: HashMap::new(),
@@ -64,14 +65,17 @@ where
         self.agents.get(name).cloned()
     }
 
+    /// True if an agent is registered under `name`.
     pub fn contains(&self, name: &str) -> bool {
         self.agents.contains_key(name)
     }
 
+    /// Number of registered agents.
     pub fn len(&self) -> usize {
         self.agents.len()
     }
 
+    /// True if no agents are registered.
     pub fn is_empty(&self) -> bool {
         self.agents.is_empty()
     }

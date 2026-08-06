@@ -55,10 +55,12 @@ pub enum TraceErr {
 }
 
 impl TraceErr {
+    /// Build a `Rejected` error from a reason string.
     pub fn rejected(reason: impl Into<String>) -> Self {
         Self::Rejected(reason.into())
     }
 
+    /// Build a `ToolFailed` error from a tool name and failure message.
     pub fn tool_failed(tool: impl Into<String>, message: impl Into<String>) -> Self {
         Self::ToolFailed {
             tool: tool.into(),
@@ -66,6 +68,7 @@ impl TraceErr {
         }
     }
 
+    /// Build a catch-all `Other` error for cases that don't fit a specific variant.
     pub fn other(message: impl Into<String>) -> Self {
         Self::Other(message.into())
     }
