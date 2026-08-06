@@ -212,4 +212,51 @@ mod tests {
         );
         assert_eq!(outcome.context.delegation_chain, vec!["DeadEnd"]);
     }
+
+    /// A trivial agent that always succeeds with no escalation.
+    struct Healthy;
+
+    #[async_trait]
+    impl Agent for Healthy {
+        type Input = ();
+        type Output = &'static str;
+
+        fn name(&self) -> &str {
+            "Healthy"
+        }
+        fn goal(&self) -> &str {
+            "succeed without ever escalating"
+        }
+
+        async fn run(&self, _input: (), ctx: &mut AgentContext) -> Trace<&'static str> {
+            ctx.record_step().unwrap();
+            Trace::new("done")
+        }
+    }
+
+    #[tokio::test]
+    async fn no_escalation_returns_immediately_with_a_single_hop_chain() {
+        let registry: AgentRegistry<(), &'static str> = AgentRegistry::new();
+
+        let outcome = run_with_escalation(&Healthy, (), &registry, 10).await;
+
+        assert_eq!(outcome.trace.value(), Some(&"done"));
+        assert!(outcome.unresolved.is_none());
+        assert_eq!(outcome.context.delegation_chain, vec!["Healthy"]);
+    }
+
+    #[tokio::test]
+    async fn zero_max_hops_stops_before_the_first_delegation() {
+        let mut registry: AgentRegistry<(), ()> = AgentRegistry::new();
+        registry.register(Arc::new(AlwaysEscalates));
+
+        let outcome = run_with_escalation(&AlwaysEscalates, (), &registry, 0).await;
+
+        assert_eq!(
+            outcome.unresolved,
+            Some(EscalationAction::Delegate("AlwaysEscalates".to_string()))
+        );
+        // No hops occurred — only the initial run is in the chain.
+        assert_eq!(outcome.context.delegation_chain, vec!["AlwaysEscalates"]);
+    }
 }

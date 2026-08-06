@@ -13,4 +13,8 @@ serde        = { workspace = true }
 async-trait  = { workspace = true }
 
 [dev-dependencies]
-tokio = { workspace = true }
+tokio    = { workspace = true }
+proptest = { workspace = true }
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ["cfg(kani)"] }

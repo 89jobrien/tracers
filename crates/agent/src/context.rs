@@ -60,3 +60,115 @@ impl AgentContext {
         chain
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_context_starts_at_zero_steps_with_a_singleton_chain() {
+        let ctx = AgentContext::new("probe", Some(5));
+        assert_eq!(ctx.steps_taken, 0);
+        assert_eq!(ctx.delegation_chain, vec!["probe"]);
+        assert!(!ctx.is_budget_exhausted());
+    }
+
+    #[test]
+    fn record_step_without_a_budget_never_errors() {
+        let mut ctx = AgentContext::new("probe", None);
+        for _ in 0..1000 {
+            ctx.record_step().expect("no budget means no limit");
+        }
+        assert_eq!(ctx.budget_remaining(), None);
+        assert!(!ctx.is_budget_exhausted());
+    }
+
+    #[test]
+    fn record_step_errors_exactly_one_step_past_budget() {
+        let mut ctx = AgentContext::new("probe", Some(2));
+        ctx.record_step().expect("first step is within budget");
+        assert!(!ctx.is_budget_exhausted());
+        ctx.record_step()
+            .expect("second step reaches budget exactly");
+        assert!(ctx.is_budget_exhausted());
+        let err = ctx.record_step().expect_err("third step exceeds budget");
+        assert!(matches!(
+            err,
+            tracers_core::TraceErr::BudgetExhausted { steps: 3 }
+        ));
+    }
+
+    #[test]
+    fn budget_remaining_saturates_at_zero_rather_than_going_negative() {
+        let mut ctx = AgentContext::new("probe", Some(1));
+        ctx.record_step().unwrap();
+        assert_eq!(ctx.budget_remaining(), Some(0));
+        let _ = ctx.record_step();
+        assert_eq!(ctx.budget_remaining(), Some(0));
+    }
+
+    #[test]
+    fn extend_chain_appends_without_mutating_the_original() {
+        let ctx = AgentContext::new("root", None);
+        let extended = ctx.extend_chain("child");
+        assert_eq!(extended, vec!["root", "child"]);
+        assert_eq!(ctx.delegation_chain, vec!["root"]);
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn budget_remaining_never_exceeds_the_declared_budget(
+            budget in 0usize..50,
+            calls in 0usize..80,
+        ) {
+            let mut ctx = AgentContext::new("probe", Some(budget));
+            for _ in 0..calls {
+                let _ = ctx.record_step();
+            }
+            let remaining = ctx.budget_remaining().unwrap();
+            proptest::prop_assert!(remaining <= budget);
+        }
+
+        #[test]
+        fn is_budget_exhausted_matches_steps_taken_reaching_budget(
+            budget in 0usize..50,
+            calls in 0usize..80,
+        ) {
+            let mut ctx = AgentContext::new("probe", Some(budget));
+            for _ in 0..calls {
+                let _ = ctx.record_step();
+            }
+            proptest::prop_assert_eq!(ctx.is_budget_exhausted(), ctx.steps_taken >= budget);
+        }
+    }
+}
+
+#[cfg(kani)]
+mod kani_proofs {
+    use super::*;
+
+    /// Proves `budget_remaining`'s `saturating_sub` never underflows and
+    /// always agrees with `is_budget_exhausted` — the same
+    /// steps_taken-vs-budget comparison done two different ways must
+    /// never disagree, for any reachable budget/steps_taken pair.
+    #[kani::proof]
+    fn budget_remaining_and_is_exhausted_agree() {
+        let budget: usize = kani::any();
+        let steps_taken: usize = kani::any();
+        kani::assume(budget <= 1_000_000);
+        kani::assume(steps_taken <= 1_000_000);
+
+        let ctx = AgentContext {
+            agent_name: String::new(),
+            steps_taken,
+            budget: Some(budget),
+            delegation_chain: Vec::new(),
+        };
+
+        let remaining = ctx.budget_remaining().unwrap();
+        let exhausted = ctx.is_budget_exhausted();
+
+        assert_eq!(remaining == 0, steps_taken >= budget);
+        assert_eq!(exhausted, steps_taken >= budget);
+    }
+}

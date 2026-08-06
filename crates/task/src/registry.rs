@@ -217,4 +217,37 @@ mod tests {
         assert_eq!(registry.failed().len(), 1);
         assert_eq!(registry.total(), 3);
     }
+
+    proptest::proptest! {
+        #[test]
+        fn insert_then_get_always_round_trips_by_id(title in "[a-z]{1,20}") {
+            let task = Task::new(title.clone());
+            let id = task.id;
+            let mut registry = TaskRegistry::new();
+            registry.insert(task);
+            let fetched = registry.get(id).unwrap();
+            proptest::prop_assert_eq!(&fetched.title, &title);
+            proptest::prop_assert_eq!(registry.total(), 1);
+        }
+
+        #[test]
+        fn all_by_priority_is_always_sorted_non_increasing(
+            priorities in proptest::collection::vec(0u8..4, 1..20)
+        ) {
+            let to_priority = |n: u8| match n {
+                0 => Priority::Low,
+                1 => Priority::Normal,
+                2 => Priority::High,
+                _ => Priority::Critical,
+            };
+            let mut registry = TaskRegistry::new();
+            for (i, p) in priorities.iter().enumerate() {
+                registry.insert(Task::new(format!("t{i}")).with_priority(to_priority(*p)));
+            }
+            let ordered = registry.all_by_priority();
+            for window in ordered.windows(2) {
+                proptest::prop_assert!(window[0].priority >= window[1].priority);
+            }
+        }
+    }
 }

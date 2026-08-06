@@ -41,3 +41,51 @@ where
     let futures = inputs.into_iter().map(|input| spawn(agent, input));
     futures::future::join_all(futures).await
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use async_trait::async_trait;
+    use tracers_agent::AgentContext;
+    use tracers_core::Trace;
+
+    struct Doubler;
+
+    #[async_trait]
+    impl Agent for Doubler {
+        type Input = u32;
+        type Output = u32;
+        fn name(&self) -> &str {
+            "Doubler"
+        }
+        fn goal(&self) -> &str {
+            "double a number"
+        }
+        async fn run(&self, input: u32, ctx: &mut AgentContext) -> Trace<u32> {
+            ctx.record_step().unwrap();
+            Trace::new(input * 2)
+        }
+    }
+
+    #[tokio::test]
+    async fn empty_inputs_produce_no_outcomes() {
+        let outcomes = join_all(&Doubler, vec![]).await;
+        assert!(outcomes.is_empty());
+    }
+
+    #[tokio::test]
+    async fn outcomes_preserve_input_order() {
+        let outcomes = join_all(&Doubler, vec![1, 2, 3, 4]).await;
+        let values: Vec<_> = outcomes.iter().map(|o| *o.trace.value().unwrap()).collect();
+        assert_eq!(values, vec![2, 4, 6, 8]);
+    }
+
+    #[tokio::test]
+    async fn each_outcome_gets_its_own_fresh_context() {
+        let outcomes = join_all(&Doubler, vec![10, 20]).await;
+        for outcome in &outcomes {
+            assert_eq!(outcome.context.steps_taken, 1);
+            assert_eq!(outcome.context.delegation_chain, vec!["Doubler"]);
+        }
+    }
+}

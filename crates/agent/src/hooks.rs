@@ -30,3 +30,29 @@ impl EscalationAction {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn none_variant_is_none_and_has_no_target() {
+        let action = EscalationAction::None;
+        assert!(action.is_none());
+        assert_eq!(action.delegate_target(), None);
+    }
+
+    #[test]
+    fn delegate_variant_is_not_none_and_exposes_target() {
+        let action = EscalationAction::Delegate("Senior".to_string());
+        assert!(!action.is_none());
+        assert_eq!(action.delegate_target(), Some("Senior"));
+    }
+
+    #[test]
+    fn emit_variant_is_not_none_and_has_no_target() {
+        let action = EscalationAction::Emit(TraceErr::other("abort"));
+        assert!(!action.is_none());
+        assert_eq!(action.delegate_target(), None);
+    }
+}
