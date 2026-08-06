@@ -23,5 +23,5 @@ pub mod trace;
 
 pub use error::TraceErr;
 pub use span::Span;
-pub use step::{Branch, BranchOutcome, Step};
+pub use step::{Branch, BranchOutcome, Step, StepOutcome};
 pub use trace::{Trace, TraceRef};
