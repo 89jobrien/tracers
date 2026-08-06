@@ -79,19 +79,11 @@ where
 
     let results: Vec<(String, Trace<O>)> = futures::future::join_all(futures).await;
 
-    // Deliberately not `Iterator::max_by`: it returns the *last* element
-    // on a tie, but we want ties to keep the first candidate in
-    // `candidates` order — a fold that only replaces on strictly
-    // greater confidence gives us that.
-    let mut winner_idx = 0usize;
-    let mut best_score = f64::NEG_INFINITY;
-    for (i, (_, trace)) in results.iter().enumerate() {
-        let score = confidence_of(trace);
-        if score > best_score {
-            best_score = score;
-            winner_idx = i;
-        }
-    }
+    let scores: Vec<f64> = results
+        .iter()
+        .map(|(_, trace)| confidence_of(trace))
+        .collect();
+    let winner_idx = first_max_index(&scores);
 
     let mut step = Step::named("speculate");
     for (i, (label, trace)) in results.iter().enumerate() {
@@ -115,6 +107,29 @@ where
         .expect("winner_idx is always within results' bounds");
     winning.push_step(step);
     winning
+}
+
+/// Index of the first strictly-greatest score in `scores`.
+///
+/// Deliberately not `Iterator::max_by`: it returns the *last* element on
+/// a tie, but `speculate` wants ties to keep the first candidate in
+/// `candidates` order — a fold that only replaces on strictly greater
+/// score gives us that.
+///
+/// # Panics
+///
+/// Panics if `scores` is empty.
+fn first_max_index(scores: &[f64]) -> usize {
+    assert!(!scores.is_empty(), "scores must not be empty");
+    let mut winner_idx = 0usize;
+    let mut best_score = f64::NEG_INFINITY;
+    for (i, &score) in scores.iter().enumerate() {
+        if score > best_score {
+            best_score = score;
+            winner_idx = i;
+        }
+    }
+    winner_idx
 }
 
 /// Mean confidence across a trace's scored steps. `-1.0` if the trace
@@ -219,5 +234,88 @@ mod tests {
     async fn empty_candidates_panics() {
         let candidates: Vec<(String, Arc<dyn Agent<Input = (), Output = ()>>)> = vec![];
         let _ = speculate(candidates, ()).await;
+    }
+
+    // ── first_max_index: unit ────────────────────────────────────────────────
+
+    #[test]
+    fn first_max_index_picks_the_single_max() {
+        assert_eq!(first_max_index(&[0.1, 0.9, 0.5]), 1);
+    }
+
+    #[test]
+    fn first_max_index_keeps_first_candidate_on_tie() {
+        assert_eq!(first_max_index(&[0.5, 0.5, 0.5]), 0);
+        assert_eq!(first_max_index(&[0.1, 0.9, 0.9]), 1);
+    }
+
+    #[test]
+    fn first_max_index_handles_single_element() {
+        assert_eq!(first_max_index(&[0.3]), 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "scores must not be empty")]
+    fn first_max_index_panics_on_empty_scores() {
+        first_max_index(&[]);
+    }
+
+    // ── first_max_index: property ────────────────────────────────────────────
+    // Regression coverage for the documented max_by tie-break bug: for any
+    // non-empty score vector, the returned index must point at a value tied
+    // for the maximum, and it must be the *first* such index.
+
+    proptest::proptest! {
+        #[test]
+        fn first_max_index_always_points_at_a_maximal_score(
+            scores in proptest::collection::vec(-1.0f64..=1.0, 1..20)
+        ) {
+            let idx = first_max_index(&scores);
+            let max = scores.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+            proptest::prop_assert_eq!(scores[idx], max);
+        }
+
+        #[test]
+        fn first_max_index_is_the_earliest_maximal_index(
+            scores in proptest::collection::vec(-1.0f64..=1.0, 1..20)
+        ) {
+            let idx = first_max_index(&scores);
+            let max = scores.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+            let earliest = scores.iter().position(|&s| s == max).unwrap();
+            proptest::prop_assert_eq!(idx, earliest);
+        }
+    }
+}
+
+// ── first_max_index: model check ────────────────────────────────────────────
+// Proves the tie-break invariant exhaustively within bounds, rather than just
+// for sampled inputs, given this exact bug shipped once already (see
+// CLAUDE.md's `max_by` note) and was only caught by a hand-written unit test.
+#[cfg(kani)]
+mod kani_proofs {
+    use super::first_max_index;
+
+    #[kani::proof]
+    #[kani::unwind(5)]
+    fn first_max_index_never_indexes_out_of_bounds() {
+        let len: usize = kani::any();
+        kani::assume(len > 0 && len <= 4);
+        let mut scores = Vec::with_capacity(len);
+        for _ in 0..len {
+            let s: f64 = kani::any();
+            kani::assume(s.is_finite());
+            scores.push(s);
+        }
+        let idx = first_max_index(&scores);
+        assert!(idx < scores.len());
+    }
+
+    #[kani::proof]
+    #[kani::unwind(5)]
+    fn first_max_index_on_two_element_tie_keeps_first() {
+        let a: f64 = kani::any();
+        kani::assume(a.is_finite());
+        let scores = vec![a, a];
+        assert_eq!(first_max_index(&scores), 0);
     }
 }

@@ -189,4 +189,18 @@ mod tests {
             }
         );
     }
+
+    proptest::proptest! {
+        #[test]
+        fn step_with_confidence_is_always_in_unit_range(raw in -1000.0f64..1000.0) {
+            let confidence = Step::named("a").with_confidence(raw).confidence.unwrap();
+            proptest::prop_assert!((0.0..=1.0).contains(&confidence));
+        }
+
+        #[test]
+        fn branch_with_confidence_is_always_in_unit_range(raw in -1000.0f64..1000.0) {
+            let confidence = Branch::taken("a").with_confidence(raw).confidence.unwrap();
+            proptest::prop_assert!((0.0..=1.0).contains(&confidence));
+        }
+    }
 }

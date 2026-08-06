@@ -14,3 +14,6 @@ uuid       = { workspace = true }
 chrono     = { workspace = true }
 thiserror  = { workspace = true }
 miette     = { version = "7", features = ["fancy"] }
+
+[dev-dependencies]
+proptest = { workspace = true }

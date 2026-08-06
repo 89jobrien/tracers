@@ -219,4 +219,12 @@ mod tests {
         let t = Task::new("x").with_confidence(5.0);
         assert_eq!(t.confidence, Some(1.0));
     }
+
+    proptest::proptest! {
+        #[test]
+        fn task_with_confidence_is_always_in_unit_range(raw in -1000.0f64..1000.0) {
+            let confidence = Task::new("x").with_confidence(raw).confidence.unwrap();
+            proptest::prop_assert!((0.0..=1.0).contains(&confidence));
+        }
+    }
 }

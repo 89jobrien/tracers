@@ -16,3 +16,7 @@ futures       = { workspace = true }
 [dev-dependencies]
 tokio       = { workspace = true }
 async-trait = { workspace = true }
+proptest    = { workspace = true }
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ["cfg(kani)"] }

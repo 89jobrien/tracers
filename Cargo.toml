@@ -27,3 +27,4 @@ thiserror   = "=1.0.64"
 tokio       = { version = "=1.44.2", features = ["full"] }
 async-trait = "=0.1.83"
 futures     = "=0.3.30"
+proptest    = "=1.11.0"
