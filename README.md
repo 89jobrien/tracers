@@ -2,20 +2,27 @@
 
 > a programming language where reasoning is first-class
 
-In most languages, values are first-class. In `trace::`, _reasoning provenance_ is first-class. Every computation returns `Trace<T>` — a value enriched with the full causal chain of how it was produced: steps taken, branches considered and rejected, confidence at each decision point, and RAII-style span timing.
+In most languages, values are first-class. In `trace::`, _reasoning provenance_ is
+first-class. Every computation returns `Trace<T>` — a value enriched with the full
+causal chain of how it was produced: steps taken, branches considered and rejected,
+confidence at each decision point, and RAII-style span timing.
 
-This repository contains the `trace::` language design and a Rust reference implementation of its core types.
+This repository contains the `trace::` language design and a Rust reference
+implementation of its core types, all of which compile and are usable today.
 
 ---
 
 ## crates
 
-| crate             | description                                                     |
-| ----------------- | --------------------------------------------------------------- |
-| `tracers-core`    | `Trace<T>`, `Step`, `Span`, `Branch`, `TraceErr`                |
-| `tracers-task`    | `Task`, `TaskStatus`, `Priority`, `TaskRegistry`                |
-| `tracers-agent`   | `Agent` trait, `spawn`/`delegate`, lifecycle escalation hooks   |
-| `tracers-runtime` | `AgentRegistry`, `run_with_escalation`, `join_all`, `speculate` |
+| crate              | description                                                     | docs |
+| ------------------ | ---------------------------------------------------------------- | --- |
+| `tracers-core`     | `Trace<T>`, `Step`, `Span`, `Branch`, `TraceErr`                | [README](crates/core/README.md) |
+| `tracers-task`     | `Task`, `TaskStatus`, `Priority`, `TaskRegistry`                | [README](crates/task/README.md) |
+| `tracers-agent`    | `Agent` trait, `spawn`/`delegate`, lifecycle escalation hooks   | [README](crates/agent/README.md) |
+| `tracers-runtime`  | `AgentRegistry`, `run_with_escalation`, `join_all`, `speculate` | [README](crates/runtime/README.md) |
+
+`tracers-core` has no dependency on any other crate in the workspace; the
+dependency graph flows `core -> task`, `core -> agent -> runtime`.
 
 ---
 
@@ -36,13 +43,18 @@ t.bottlenecks()        // where did we slow down?
 t.low_confidence()     // where were we uncertain?
 ```
 
-`Trace<T>` is to reasoning what `Result<T, E>` is to errors: a typed, propagatable wrapper with explicit handling at every step. The `?` operator works identically — errors propagate as `TraceErr` and every propagation point is logged.
+`Trace<T>` is to reasoning what `Result<T, E>` is to errors: a typed,
+propagatable wrapper with explicit handling at every step. The `?` operator
+works identically — errors propagate as `TraceErr` and every propagation
+point is logged.
 
 ---
 
 ## task management
 
-Tasks in `trace::` are serializable first-class values. `TaskStatus::Done` carries a `TraceRef` — a stable pointer back to the execution trace that produced the result. No output is ever detached from its provenance.
+Tasks in `trace::` are serializable first-class values. `TaskStatus::Done`
+carries a `TraceRef` — a stable pointer back to the execution trace that
+produced the result. No output is ever detached from its provenance.
 
 ```rust
 use tracers_task::{Task, TaskRegistry, Priority};
@@ -73,11 +85,15 @@ registry.complete(task.id, trace_ref, &store)?;
 let registry = TaskRegistry::load(&store)?;
 ```
 
-`TaskRegistry` only depends on the `CheckpointStore` trait — swap `FileCheckpointStore` for any other backend (S3, a database, an in-memory buffer for tests) without touching registry code.
+`TaskRegistry` only depends on the `CheckpointStore` trait — swap
+`FileCheckpointStore` for any other backend (S3, a database, an in-memory
+buffer for tests) without touching registry code.
 
 ---
 
-## agents (language design)
+## agents
+
+### language design
 
 ```
 agent Planner {
@@ -107,9 +123,10 @@ Key differences from a Rust `fn`:
 | escalation rules | no      | yes (`on_*`)    |
 | reasoning log    | no      | always-on       |
 
-### the `tracers-agent` crate
+### `tracers-agent`
 
-The `Agent` trait, `spawn`, and `delegate` are implemented today as a real (async-trait–backed) Rust API — not just language design:
+The `Agent` trait, `spawn`, and `delegate` are implemented today as a real
+(async-trait–backed) Rust API — not just language design:
 
 ```rust
 use async_trait::async_trait;
@@ -142,11 +159,17 @@ impl Agent for Coder {
 }
 ```
 
-`spawn()` runs the agent and evaluates its lifecycle hooks against the resulting trace — budget exhaustion, step failure, and low confidence each resolve to an `EscalationAction` the caller can act on. `delegate()` does the same but extends the caller's `delegation_chain`, so a multi-agent handoff is always reconstructable from `AgentContext::delegation_chain`.
+`spawn()` runs the agent and evaluates its lifecycle hooks against the
+resulting trace — budget exhaustion, step failure, and low confidence each
+resolve to an `EscalationAction` the caller can act on. `delegate()` does the
+same but extends the caller's `delegation_chain`, so a multi-agent handoff is
+always reconstructable from `AgentContext::delegation_chain`.
 
-### the `tracers-runtime` crate
+### `tracers-runtime`
 
-`EscalationAction::Delegate("SeniorCoder")` is just a name — resolving it into a live agent and actually running it is a runtime concern. `tracers-runtime` adds:
+`EscalationAction::Delegate("SeniorCoder")` is just a name — resolving it
+into a live agent and actually running it is a runtime concern.
+`tracers-runtime` adds:
 
 ```rust
 use tracers_runtime::{AgentRegistry, run_with_escalation, join_all, speculate};
@@ -172,7 +195,10 @@ let trace = speculate(candidates, task).await;
 // losing candidates are recorded as rejected Branches on a "speculate" step
 ```
 
-`join_all` and `speculate` currently run concurrently on the same task (via `futures::future::join_all`) rather than across OS threads, and there's no shared step-budget spanning concurrent branches yet — both are tracked as open follow-ups rather than silently assumed.
+`join_all` and `speculate` currently run concurrently on the same task (via
+`futures::future::join_all`) rather than across OS threads, and there's no
+shared step-budget spanning concurrent branches yet — both are tracked as
+open follow-ups rather than silently assumed.
 
 ---
 
@@ -206,28 +232,44 @@ pick_best(|plans| plans.max_by(|p| p.confidence))
 
 ## design principles
 
-**Ownership of reasoning.** A trace has a single owner. Merging or diffing traces is explicit — no hidden shared state between agents.
+**Ownership of reasoning.** A trace has a single owner. Merging or diffing
+traces is explicit — no hidden shared state between agents.
 
-**No silent failures.** `reject()` is a first-class operation. Every abandoned branch is recorded with a reason. `TraceErr` is a named enum; there are no mystery panics.
+**No silent failures.** `reject()` is a first-class operation. Every
+abandoned branch is recorded with a reason. `TraceErr` is a named enum;
+there are no mystery panics.
 
-**Serialization guarantee.** Any type that participates in task management must be serializable. There is no runtime surprise where a pipeline cannot be checkpointed.
+**Serialization guarantee.** Any type that participates in task management
+must be serializable. There is no runtime surprise where a pipeline cannot
+be checkpointed.
 
-**Provider-agnostic.** `tool` declarations are typed interfaces. Providers (LLMs, APIs, storage) are swappable without changing agent logic — the same pattern as Rust trait objects.
+**Provider-agnostic.** `tool` declarations are typed interfaces. Providers
+(LLMs, APIs, storage) are swappable without changing agent logic — the same
+pattern as Rust trait objects.
 
 ---
 
 ## related work
 
-- `agent_trace` — Joe's personal traced agentic execution crate (the design inspiration for `Trace<T>`)
+- `crux` — agentic Rust DSL with a typed `Crux<T>` trace value, budgets, and
+  confidence-based delegation; closest sibling design to `Trace<T>`
 - `doob` — agent-first task CLI that `tracers-task` could back
-- `orca-strait` — parallel TDD sub-agent orchestrator that could consume `TaskRegistry`
-- LangGraph, CrewAI — graph-based agentic frameworks; `trace::` differs by making provenance first-class at the type level rather than at the runtime level
+- `orca-strait` — parallel TDD sub-agent orchestrator that could consume
+  `TaskRegistry`
+- LangGraph, CrewAI — graph-based agentic frameworks; `trace::` differs by
+  making provenance first-class at the type level rather than at the
+  runtime level
 
 ---
 
 ## status
 
-Early design + reference implementation. `tracers-core` and `tracers-task` compile and are usable as Rust libraries today. The `trace::` surface syntax and compiler are design artifacts — contributions and discussion welcome.
+Early design + reference implementation. All four crates — `tracers-core`,
+`tracers-task`, `tracers-agent`, and `tracers-runtime` — compile
+(`cargo check --workspace`) and are usable as Rust libraries today. The
+`trace::` surface syntax and compiler shown above (`agent Planner { .. }`,
+`branch { .. }`, `speculate { .. }`) are design artifacts, not yet
+implemented — contributions and discussion welcome.
 
 ## license
 
