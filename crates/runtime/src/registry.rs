@@ -90,3 +90,54 @@ where
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use async_trait::async_trait;
+    use tracers_agent::AgentContext;
+    use tracers_core::Trace;
+
+    struct Echo(&'static str);
+
+    #[async_trait]
+    impl Agent for Echo {
+        type Input = String;
+        type Output = String;
+        fn name(&self) -> &str {
+            self.0
+        }
+        fn goal(&self) -> &str {
+            "echo input"
+        }
+        async fn run(&self, input: String, ctx: &mut AgentContext) -> Trace<String> {
+            ctx.record_step().unwrap();
+            Trace::new(input)
+        }
+    }
+
+    #[test]
+    fn empty_registry_reports_len_zero_and_is_empty() {
+        let registry: AgentRegistry<String, String> = AgentRegistry::new();
+        assert_eq!(registry.len(), 0);
+        assert!(registry.is_empty());
+        assert!(!registry.contains("Echo"));
+    }
+
+    #[test]
+    fn register_makes_agent_findable_by_name() {
+        let mut registry: AgentRegistry<String, String> = AgentRegistry::new();
+        registry.register(Arc::new(Echo("Echo")));
+        assert_eq!(registry.len(), 1);
+        assert!(!registry.is_empty());
+        assert!(registry.contains("Echo"));
+    }
+
+    #[test]
+    fn registering_same_name_twice_overwrites() {
+        let mut registry: AgentRegistry<String, String> = AgentRegistry::new();
+        registry.register(Arc::new(Echo("Echo")));
+        registry.register(Arc::new(Echo("Echo")));
+        assert_eq!(registry.len(), 1);
+    }
+}

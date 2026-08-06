@@ -142,3 +142,51 @@ impl Branch {
         self
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn step_confidence_clamps_into_unit_range() {
+        assert_eq!(Step::named("a").with_confidence(1.5).confidence, Some(1.0));
+        assert_eq!(Step::named("a").with_confidence(-0.5).confidence, Some(0.0));
+    }
+
+    #[test]
+    fn step_rejected_and_failed_flip_outcome_and_helpers() {
+        let rejected = Step::named("a").rejected("nope");
+        assert!(rejected.is_rejected());
+        assert!(!rejected.is_failed());
+
+        let failed = Step::named("b").failed("boom");
+        assert!(failed.is_failed());
+        assert!(!failed.is_rejected());
+
+        let taken = Step::named("c");
+        assert!(!taken.is_rejected());
+        assert!(!taken.is_failed());
+    }
+
+    #[test]
+    fn branch_confidence_clamps_into_unit_range() {
+        assert_eq!(
+            Branch::taken("a").with_confidence(2.0).confidence,
+            Some(1.0)
+        );
+    }
+
+    #[test]
+    fn branch_taken_and_rejected_set_expected_outcome() {
+        let taken = Branch::taken("a");
+        assert_eq!(taken.outcome, BranchOutcome::Taken);
+
+        let rejected = Branch::rejected("b", "worse option");
+        assert_eq!(
+            rejected.outcome,
+            BranchOutcome::Rejected {
+                reason: "worse option".to_string()
+            }
+        );
+    }
+}

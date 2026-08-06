@@ -148,3 +148,108 @@ impl<T: Clone + Serialize> From<Trace<T>> for Result<T, TraceErr> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::step::Step;
+    use std::time::Duration;
+
+    #[test]
+    fn new_trace_is_ok_and_carries_value() {
+        let t = Trace::new(42);
+        assert!(t.is_ok());
+        assert_eq!(t.value(), Some(&42));
+        assert!(t.error().is_none());
+    }
+
+    #[test]
+    fn failed_trace_is_not_ok_and_carries_error() {
+        let t: Trace<i32> = Trace::failed(TraceErr::other("boom"));
+        assert!(!t.is_ok());
+        assert_eq!(t.value(), None);
+        assert!(t.error().is_some());
+    }
+
+    #[test]
+    fn into_value_consumes_and_returns_owned_value() {
+        let t = Trace::new(String::from("hi"));
+        assert_eq!(t.into_value(), Some(String::from("hi")));
+    }
+
+    #[test]
+    fn trace_ref_wraps_the_trace_id() {
+        let t = Trace::new(1);
+        assert_eq!(t.trace_ref(), TraceRef(t.id));
+    }
+
+    #[test]
+    fn push_step_appends_to_causal_chain() {
+        let mut t = Trace::new(1);
+        t.push_step(Step::named("a"));
+        t.push_step(Step::named("b"));
+        let chain = t.causal_chain();
+        assert_eq!(chain.len(), 2);
+        assert_eq!(chain[0].name, "a");
+        assert_eq!(chain[1].name, "b");
+    }
+
+    #[test]
+    fn merge_concatenates_causal_chains_and_keeps_lhs_value() {
+        let mut lhs = Trace::new(1);
+        lhs.push_step(Step::named("a"));
+        let mut rhs = Trace::new(2);
+        rhs.push_step(Step::named("b"));
+
+        let merged = Trace::merge(lhs, rhs);
+        assert_eq!(merged.value(), Some(&1));
+        assert_eq!(merged.causal_chain().len(), 2);
+    }
+
+    #[test]
+    fn rejected_branches_filters_only_rejected_steps() {
+        let mut t = Trace::new(1);
+        t.push_step(Step::named("ok"));
+        t.push_step(Step::named("rej").rejected("nope"));
+        assert_eq!(t.rejected_branches().len(), 1);
+        assert_eq!(t.rejected_branches()[0].name, "rej");
+    }
+
+    #[test]
+    fn bottlenecks_sorts_slowest_first() {
+        let mut t = Trace::new(1);
+        t.push_step(Step::named("fast").with_duration(Duration::from_millis(10)));
+        t.push_step(Step::named("slow").with_duration(Duration::from_millis(100)));
+        let sorted = t.bottlenecks();
+        assert_eq!(sorted[0].name, "slow");
+        assert_eq!(sorted[1].name, "fast");
+    }
+
+    #[test]
+    fn low_confidence_uses_default_threshold_of_0_7() {
+        let mut t = Trace::new(1);
+        t.push_step(Step::named("weak").with_confidence(0.5));
+        t.push_step(Step::named("strong").with_confidence(0.9));
+        let weak = t.low_confidence();
+        assert_eq!(weak.len(), 1);
+        assert_eq!(weak[0].name, "weak");
+    }
+
+    #[test]
+    fn low_confidence_below_respects_arbitrary_threshold() {
+        let mut t = Trace::new(1);
+        t.push_step(Step::named("a").with_confidence(0.3));
+        t.push_step(Step::named("b").with_confidence(0.6));
+        assert_eq!(t.low_confidence_below(0.5).len(), 1);
+        assert_eq!(t.low_confidence_below(0.7).len(), 2);
+    }
+
+    #[test]
+    fn from_trace_for_result_maps_ok_and_err() {
+        let ok: Result<i32, TraceErr> = Trace::new(5).into();
+        assert_eq!(ok, Ok(5));
+
+        let err: Result<i32, TraceErr> = Trace::failed(TraceErr::other("x")).into();
+        assert!(err.is_err());
+    }
+}

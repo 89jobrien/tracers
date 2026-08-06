@@ -159,3 +159,64 @@ impl Task {
         matches!(self.status, TaskStatus::Failed { .. })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn priority_ordering_is_low_to_critical() {
+        assert!(Priority::Low < Priority::Normal);
+        assert!(Priority::Normal < Priority::High);
+        assert!(Priority::High < Priority::Critical);
+    }
+
+    #[test]
+    fn new_task_starts_pending_with_normal_priority() {
+        let t = Task::new("do the thing");
+        assert!(t.is_pending());
+        assert_eq!(t.priority, Priority::Normal);
+        assert!(t.assigned_to.is_none());
+    }
+
+    #[test]
+    fn assign_to_transitions_to_running_and_sets_assignee() {
+        let mut t = Task::new("x");
+        t.assign_to("agent-1");
+        assert_eq!(t.status, TaskStatus::Running);
+        assert_eq!(t.assigned_to.as_deref(), Some("agent-1"));
+    }
+
+    #[test]
+    fn complete_transitions_to_done_and_clears_assignee() {
+        let mut t = Task::new("x");
+        t.assign_to("agent-1");
+        let trace_ref = TraceRef(Uuid::new_v4());
+        t.complete(trace_ref);
+        assert!(t.is_done());
+        assert!(t.assigned_to.is_none());
+    }
+
+    #[test]
+    fn fail_transitions_to_failed_and_clears_assignee() {
+        let mut t = Task::new("x");
+        t.assign_to("agent-1");
+        let trace_ref = TraceRef(Uuid::new_v4());
+        t.fail(TraceErr::other("boom"), trace_ref);
+        assert!(t.is_failed());
+        assert!(t.assigned_to.is_none());
+    }
+
+    #[test]
+    fn depends_on_appends_dependency_ids() {
+        let dep = Uuid::new_v4();
+        let t = Task::new("x").depends_on(dep);
+        assert_eq!(t.depends_on, vec![dep]);
+    }
+
+    #[test]
+    fn with_confidence_clamps_into_unit_range() {
+        let t = Task::new("x").with_confidence(5.0);
+        assert_eq!(t.confidence, Some(1.0));
+    }
+}

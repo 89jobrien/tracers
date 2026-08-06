@@ -137,3 +137,84 @@ impl From<Vec<Task>> for TaskRegistry {
         registry
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::task::Priority;
+
+    #[test]
+    fn task_with_no_dependencies_is_ready_when_pending() {
+        let registry = TaskRegistry::from(vec![Task::new("solo")]);
+        assert_eq!(registry.ready_tasks().len(), 1);
+    }
+
+    #[test]
+    fn task_is_not_ready_until_dependency_is_done() {
+        let dep = Task::new("dep");
+        let dep_id = dep.id;
+        let dependent = Task::new("dependent").depends_on(dep_id);
+
+        let mut registry = TaskRegistry::from(vec![dep, dependent]);
+        assert_eq!(registry.ready_tasks().len(), 1);
+        assert_eq!(registry.ready_tasks()[0].title, "dep");
+
+        registry
+            .get_mut(dep_id)
+            .unwrap()
+            .complete(tracers_core::TraceRef(Uuid::new_v4()));
+
+        let ready_titles: Vec<_> = registry.ready_tasks().iter().map(|t| &t.title).collect();
+        assert_eq!(ready_titles, vec!["dependent"]);
+    }
+
+    #[test]
+    fn all_by_priority_sorts_critical_first() {
+        let registry = TaskRegistry::from(vec![
+            Task::new("low").with_priority(Priority::Low),
+            Task::new("critical").with_priority(Priority::Critical),
+            Task::new("normal"),
+        ]);
+        let ordered: Vec<_> = registry
+            .all_by_priority()
+            .iter()
+            .map(|t| &t.title)
+            .collect();
+        assert_eq!(ordered, vec!["critical", "normal", "low"]);
+    }
+
+    #[test]
+    fn pending_done_failed_partition_by_status() {
+        let mut registry = TaskRegistry::from(vec![
+            Task::new("pending"),
+            Task::new("done"),
+            Task::new("failed"),
+        ]);
+        let done_id = registry
+            .pending()
+            .iter()
+            .find(|t| t.title == "done")
+            .unwrap()
+            .id;
+        let failed_id = registry
+            .pending()
+            .iter()
+            .find(|t| t.title == "failed")
+            .unwrap()
+            .id;
+
+        registry
+            .get_mut(done_id)
+            .unwrap()
+            .complete(tracers_core::TraceRef(Uuid::new_v4()));
+        registry
+            .get_mut(failed_id)
+            .unwrap()
+            .fail(TraceErr::other("x"), tracers_core::TraceRef(Uuid::new_v4()));
+
+        assert_eq!(registry.pending().len(), 1);
+        assert_eq!(registry.done().len(), 1);
+        assert_eq!(registry.failed().len(), 1);
+        assert_eq!(registry.total(), 3);
+    }
+}
