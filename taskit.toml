@@ -28,15 +28,30 @@ path = "crates/agent/src/agent.rs"
 name = "tracers-core-error"
 path = "crates/core/src/error.rs"
 
-# Coverage enforcement: run `taskit coverage` to check.
+[[protocol.surfaces]]
+name = "tracers-core-trace"
+path = "crates/core/src/trace.rs"
+
+[[protocol.surfaces]]
+name = "tracers-task-checkpoint"
+path = "crates/task/src/checkpoint/mod.rs"
+
+[[protocol.surfaces]]
+name = "tracers-task-registry"
+path = "crates/task/src/registry.rs"
+
+# Coverage enforcement: run `taskit coverage --crate-name <pkg>` to check.
+# taskit's [coverage] block only supports one crate at a time, so this stays
+# unset here; run per-crate via `taskit coverage --crate-name tracers-core`
+# (etc.) until a workspace-wide baseline is established.
 #
 # [coverage]
 # crate_name = "my-crate"
 # threshold = 80.0
 
 [ci]
-# cruxfile  = "Cruxfile"  # path to Cruxfile for crux-based pipelines
-# fail_fast = false        # stop on first failing step
+cruxfile   = "Cruxfile"
+fail_fast  = true
 
 [[ci.steps]]
 name = "self-check"
@@ -46,12 +61,12 @@ gate = true
 [[ci.steps]]
 name = "fmt --check"
 cmd = "fmt --check"
-gate = false
+gate = true
 
 [[ci.steps]]
 name = "lint"
 cmd = "lint"
-gate = false
+gate = true
 
 [[ci.steps]]
 name = "compile-tests"
@@ -61,39 +76,40 @@ gate = false
 [[ci.steps]]
 name = "test"
 cmd = "test"
-gate = false
+gate = true
 
 [[ci.steps]]
 name = "check-deps"
 cmd = "check-deps"
-gate = false
+gate = true
 
 [[ci.steps]]
 name = "check-protocol-drift"
 cmd = "check-protocol-drift"
-gate = false
+gate = true
 
 # Metric thresholds for `taskit inspect`. CLI flags override these.
-#
-# [inspect]
-# max_clippy_warnings = 0
-# max_clippy_errors   = 0
-# max_test_failures   = 0
-# max_todo_fixme      = 20   # omit to skip the TODO/FIXME check
+# Repo is currently at zero clippy warnings/errors and zero TODO/FIXME markers
+# (verified via `cargo clippy --workspace` and a full-workspace grep) — pin at
+# zero so any regression is caught immediately.
+[inspect]
+max_clippy_warnings = 0
+max_clippy_errors   = 0
+max_test_failures   = 0
+max_todo_fixme      = 0
 
 # Default retention policy for `taskit clean`. CLI --older-than overrides.
-#
-# [clean]
-# older_than = "7d"  # use `cargo sweep`; omit to run `cargo clean`
+[clean]
+older_than = "7d"  # use `cargo sweep`; omit to run `cargo clean`
 
 # Git flow: main -> develop (work) -> staging (integration) -> release (publish) -> main
-# These are the defaults; uncomment to customize branch names.
-#
-# [flow]
-# main = "main"
-# develop = "develop"
-# staging = "staging"
-# release = "release"
+# develop/staging/release branches now exist (created off main) so `taskit
+# flow auto` can run the full pipeline.
+[flow]
+main = "main"
+develop = "develop"
+staging = "staging"
+release = "release"
 
 [release]
 # github_repo = "owner/repo"  # auto-detected from git remote
@@ -105,3 +121,6 @@ publish_order = [
 ]
 # skip_docs   = false  # skip `cargo doc` before publishing
 # allow_dirty = false  # publish with uncommitted changes
+
+[output]
+default_format = "sarif"
