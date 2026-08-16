@@ -12,11 +12,14 @@ tracers-core  = { path = "../core" }
 tracers-agent = { path = "../agent" }
 serde         = { workspace = true }
 futures       = { workspace = true }
+async-trait   = { workspace = true, optional = true }
 
 [dev-dependencies]
 tokio       = { workspace = true }
-async-trait = { workspace = true }
 proptest    = { workspace = true }
+
+[features]
+test-support = ["dep:async-trait"]
 
 [lints.rust]
 unexpected_cfgs = { level = "allow", check-cfg = ["cfg(kani)"] }
