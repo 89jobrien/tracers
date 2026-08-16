@@ -5,10 +5,16 @@ members = [
     "crates/task",
     "crates/agent",
     "crates/runtime",
+    "crates/trace-test",
     "xtask",
+    # TODO: "crates/cli" — planned `trace-cli`, a doob-style CLI for
+    # inspecting trace checkpoints (see CLAUDE.md "planned crates").
 ]
 
 [workspace.package]
+# TODO: pin `rust-version` (MSRV) here and add a `taskit inspect`/CI check
+# for it — edition 2024 code has a real toolchain floor and nothing
+# currently enforces it.
 edition     = "2024"
 version     = "0.1.0"
 authors     = ["Joseph O'Brien <joseph.obrien@toptal.com>"]
@@ -17,6 +23,9 @@ repository  = "https://github.com/89jobrien/trace-lang"
 homepage    = "https://github.com/89jobrien/trace-lang"
 keywords    = ["agentic", "tracing", "task-management", "observability"]
 categories  = ["development-tools", "asynchronous"]
+
+# TODO: add `[package.metadata.docs.rs]` + docs.rs badges per crate README —
+# none of the four publishable crates have either right now.
 
 [workspace.dependencies]
 serde       = { version = "=1.0.210", features = ["derive"] }

@@ -5,6 +5,7 @@ crates = [
   { dir = "crates/task", pkg = "tracers-task" },
   { dir = "crates/agent", pkg = "tracers-agent" },
   { dir = "crates/runtime", pkg = "tracers-runtime" },
+  { dir = "crates/trace-test", pkg = "tracers-trace-test" },
 ]
 # offline_skip = "test(/.*network.*/)"
 
@@ -16,6 +17,18 @@ dependents = ["tracers-runtime"]
 [[workspace.propagation]]
 source = "tracers-core"
 dependents = ["tracers-task", "tracers-agent", "tracers-runtime"]
+
+[[workspace.propagation]]
+source = "tracers-core"
+dependents = ["tracers-trace-test"]
+
+[[workspace.propagation]]
+source = "tracers-agent"
+dependents = ["tracers-trace-test"]
+
+[[workspace.propagation]]
+source = "tracers-runtime"
+dependents = ["tracers-trace-test"]
 
 [protocol]
 # lockfile = "taskit-protocol.lock"
@@ -39,6 +52,11 @@ path = "crates/task/src/checkpoint/mod.rs"
 [[protocol.surfaces]]
 name = "tracers-task-registry"
 path = "crates/task/src/registry.rs"
+
+# TODO: add surfaces for crates/agent/src/context.rs (budget enforcement) and
+# crates/runtime/src/speculate.rs (the tie-breaking fold CLAUDE.md calls out
+# as a past bug source, caught only by a unit test) — both are load-bearing
+# invariants not currently tracked for drift.
 
 # Coverage enforcement: run `taskit coverage --crate-name <pkg>` to check.
 # taskit's [coverage] block only supports one crate at a time, so this stays
@@ -88,15 +106,19 @@ name = "check-protocol-drift"
 cmd = "check-protocol-drift"
 gate = true
 
+# TODO: add "bench" and "fuzz" steps once benches/ and fuzz/ exist — both
+# `taskit bench` and `taskit fuzz` are already available subcommands, just
+# unused; see the matching TODOs in crates/core/src/lib.rs.
+
 # Metric thresholds for `taskit inspect`. CLI flags override these.
-# Repo is currently at zero clippy warnings/errors and zero TODO/FIXME markers
-# (verified via `cargo clippy --workspace` and a full-workspace grep) — pin at
-# zero so any regression is caught immediately.
+# max_todo_fixme raised from 0: a gm-ideate pass seeded TODO markers for
+# every open backlog idea (tracked, not drift) — revisit downward as each
+# one is resolved.
 [inspect]
 max_clippy_warnings = 0
 max_clippy_errors   = 0
 max_test_failures   = 0
-max_todo_fixme      = 0
+max_todo_fixme      = 20
 
 # Default retention policy for `taskit clean`. CLI --older-than overrides.
 [clean]
@@ -112,6 +134,8 @@ staging = "staging"
 release = "release"
 
 [release]
+# TODO: add CHANGELOG.md, updated as part of `taskit patch`/`minor`/`major` —
+# nothing currently captures what changed between version bumps.
 # github_repo = "owner/repo"  # auto-detected from git remote
 publish_order = [
   "tracers-core",
