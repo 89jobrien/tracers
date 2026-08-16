@@ -16,7 +16,14 @@ async-trait   = { workspace = true, optional = true }
 
 [dev-dependencies]
 tokio       = { workspace = true }
+async-trait = { workspace = true }
 proptest    = { workspace = true }
+# Self-dependency enabling this crate's own `test-support` feature for its
+# `tests/` integration binaries — those see the lib as an external consumer
+# (cfg(test) does not apply), so `fixtures` needs the feature explicitly.
+# Cargo unifies this with the main [dependencies] entry during test builds;
+# it does not affect real downstream consumers, who never enable it.
+tracers-runtime = { path = ".", features = ["test-support"] }
 
 [features]
 test-support = ["dep:async-trait"]

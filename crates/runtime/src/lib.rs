@@ -29,6 +29,13 @@ pub mod join;
 pub mod registry;
 pub mod speculate;
 
+/// Real agent fixtures for shared use across this crate's tests and, via
+/// the `test-support` feature, downstream crates' tests (see
+/// `crates/task/src/checkpoint/mod.rs`'s `conformance` module for the
+/// identical precedent).
+#[cfg(any(test, feature = "test-support"))]
+pub mod fixtures;
+
 pub use execute::{RunOutcome, run_with_escalation};
 pub use join::join_all;
 pub use registry::AgentRegistry;
