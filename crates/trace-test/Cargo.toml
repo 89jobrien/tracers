@@ -11,6 +11,7 @@ repository.workspace = true
 tracers-core    = { path = "../core" }
 tracers-agent   = { path = "../agent" }
 tracers-runtime = { path = "../runtime" }
+serde           = { workspace = true }
 thiserror       = { workspace = true }
 miette          = { version = "7", features = ["fancy"] }
 
