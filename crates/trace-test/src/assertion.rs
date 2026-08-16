@@ -4,6 +4,23 @@
 //! under a debugger — the same rich-diagnostics style as
 //! `tracers_core::TraceErr` (see `crates/core/src/error.rs`).
 
+/// Assert the shape of an agent execution — which steps ran, at what
+/// confidence, whether it escalated to a specific agent, whether some
+/// step never fired. Each check is one of `contains_step(name)`,
+/// `confidence_below(name, threshold)`, `escalates_to(agent_name)`,
+/// `never_step(name)`. Panics with the rendered `TraceAssertionError` on
+/// the first check that fails.
+#[macro_export]
+macro_rules! assert_trace {
+    ($outcome:expr, { $($check:ident($($arg:expr),+ $(,)?));+ $(;)? }) => {
+        $(
+            if let Err(e) = $crate::assertion::$check($outcome, $($arg),+) {
+                panic!("{:?}", miette::Report::new(e));
+            }
+        )+
+    };
+}
+
 use crate::outcome::TraceOutcome;
 use miette::Diagnostic;
 use serde::Serialize;
@@ -148,6 +165,26 @@ mod tests {
     use super::*;
     use tracers_agent::spawn;
     use tracers_runtime::fixtures::{Careful, Expert, Guesser};
+
+    #[tokio::test]
+    async fn assert_trace_macro_runs_all_checks_and_panics_on_first_failure() {
+        let outcome = spawn(&Expert, ()).await;
+        // All checks pass: macro must not panic.
+        crate::assert_trace!(&outcome, {
+            contains_step("verify");
+            confidence_below("verify", 1.0);
+            never_step("publish");
+        });
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "expected step")]
+    async fn assert_trace_macro_panics_when_a_check_fails() {
+        let outcome = spawn(&Expert, ()).await;
+        crate::assert_trace!(&outcome, {
+            contains_step("nonexistent");
+        });
+    }
 
     #[tokio::test]
     async fn contains_step_passes_when_step_present() {

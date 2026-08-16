@@ -5,3 +5,8 @@
 
 pub mod assertion;
 pub mod outcome;
+
+pub use assertion::{
+    TraceAssertionError, confidence_below, contains_step, escalates_to, never_step,
+};
+pub use outcome::TraceOutcome;
