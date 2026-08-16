@@ -18,6 +18,8 @@ permissions:
 jobs:
   ci:
     name: CI Pipeline
+    # TODO: add a cross-platform matrix (macos-latest, windows-latest) —
+    # currently ubuntu-only, no signal on other platforms.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

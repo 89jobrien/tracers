@@ -3,6 +3,12 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use uuid::Uuid;
 
+// TODO: add a step cost ledger (docs/ideas/FEATURES.md #3, flagged there as
+// "lowest-effort, highest-immediate-value") — `StepCost { input_tokens,
+// output_tokens, dollars: Option<f64> }`, a `Step::with_cost()` builder, and
+// `Trace::total_cost()`/`priciest_steps()` mirroring the existing
+// `bottlenecks()` pattern.
+
 /// A single unit of reasoning. Every `observe`, `branch`, and `emit` in a
 /// trace:: agent produces a `Step` that is appended to the `Trace<T>`.
 #[derive(Debug, Clone, Serialize, Deserialize)]

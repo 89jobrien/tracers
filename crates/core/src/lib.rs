@@ -16,6 +16,16 @@
 //! assert_eq!(t.causal_chain().len(), 1);
 //! ```
 
+// TODO: add an `examples/` directory demonstrating Trace<T>/Task/Agent usage
+// end-to-end — the doctest above is the only runnable usage sample in the
+// whole workspace despite all four crates being "usable as a library today".
+//
+// TODO: add benches/ (criterion) and fuzz/ (cargo-fuzz) — `taskit bench` and
+// `taskit fuzz` are both available subcommands already, currently unused.
+// A good fuzz target: Trace<T>/Task (de)serialization round-tripping, given
+// CLAUDE.md's "all types are Serialize + Deserialize — a compile-time
+// constraint" invariant.
+
 pub mod error;
 pub mod span;
 pub mod step;

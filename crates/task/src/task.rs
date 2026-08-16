@@ -39,6 +39,10 @@ pub enum TaskStatus {
     Done(TraceRef),
     /// Failed. Carries the error and a pointer to the partial trace.
     Failed { error: TraceErr, trace: TraceRef },
+    // TODO: add `Paused(ApprovalRequest)` for human-in-the-loop traces (see
+    // docs/ideas/FEATURES.md #5) — pairs with a new
+    // `EscalationAction::RequireApproval` variant and a `resume()` fn;
+    // builds directly on the checkpoint/resume infra TaskRegistry already has.
 }
 
 /// Task scheduling priority.

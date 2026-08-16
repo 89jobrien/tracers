@@ -1,5 +1,9 @@
 use tracers_agent::{Agent, SpawnOutcome, spawn};
 
+// TODO: thread-parallel variant via `tokio::spawn` — needs `'static` agents
+// (`Arc<dyn Agent<...>>` everywhere), a bigger API change than this fn alone.
+// See CLAUDE.md "deferred" and the matching TODO in speculate.rs.
+
 /// Run `agent` concurrently against every input in `inputs`, collecting
 /// one [`SpawnOutcome`] per input in the original order.
 ///
