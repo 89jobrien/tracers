@@ -212,4 +212,33 @@ mod tests {
             Err(TraceAssertionError::UnexpectedStep { .. })
         ));
     }
+
+    struct FakeOutcome(tracers_core::Trace<()>);
+
+    impl TraceOutcome<()> for FakeOutcome {
+        fn trace(&self) -> &tracers_core::Trace<()> {
+            &self.0
+        }
+        fn delegation_chain(&self) -> &[String] {
+            &[]
+        }
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn confidence_below_matches_manual_comparison(
+            confidence in proptest::option::of(-10.0f64..10.0),
+            threshold in -10.0f64..10.0,
+        ) {
+            let mut trace = tracers_core::Trace::new(());
+            let mut step = tracers_core::Step::named("probe");
+            step.confidence = confidence.map(|c| c.clamp(0.0, 1.0));
+            trace.push_step(step);
+            let outcome = FakeOutcome(trace);
+
+            let expected = matches!(confidence.map(|c| c.clamp(0.0, 1.0)), Some(c) if c < threshold);
+            let actual = confidence_below(&outcome, "probe", threshold).is_ok();
+            proptest::prop_assert_eq!(actual, expected);
+        }
+    }
 }
