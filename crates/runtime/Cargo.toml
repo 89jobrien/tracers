@@ -23,7 +23,11 @@ proptest    = { workspace = true }
 # (cfg(test) does not apply), so `fixtures` needs the feature explicitly.
 # Cargo unifies this with the main [dependencies] entry during test builds;
 # it does not affect real downstream consumers, who never enable it.
-trace-lang-runtime = { version = "0.2.0", path = ".", features = ["test-support"] }
+# Deliberately path-only (no `version`): cargo strips path-only dev-deps
+# from the published manifest, which is exactly right — a versioned
+# self-dep can't resolve during a first publish (the crate isn't in the
+# index yet) and consumers never need it.
+trace-lang-runtime = { path = ".", features = ["test-support"] }
 
 [features]
 test-support = ["dep:async-trait"]
