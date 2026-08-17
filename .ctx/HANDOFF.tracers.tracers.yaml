@@ -3,6 +3,7 @@ id: tracers
 updated: 2026-08-17
 items:
 - id: uncommitted-work
+  doob_uuid: null
   name: uncommitted-work
   priority: P1
   status: open
@@ -28,21 +29,15 @@ items:
   - scripts/release.nu
   - .ctx/HANDOFF.tracers.state.yaml
   - .taskit/telemetry/2026/08/17/
+  completed: null
+  extra: []
 log:
 - date: '20260817.101922'
   summary: done=17 running=0 pending=1 blocked=0
-  commits:
-  - 226cf61a2abc5d47d7d8bdd216598a0ac185c44e
-  - 2f1a64b3464fc39215a40a7b7250507329c87260
-  - cb8870522411d75b47378cbfde5aff83f07653ec
-  - e6d3bf2cc9dc14bdc488301aa2b527e10d03d17f
-  - 4d5558954270008087be7327bb30aeea4ebbedc2
-  - ec9c7d869f9b0e92b6039d7fd3eb6f0970a57e8a
-  - ed466324272da42992229f79598492eabefad849
-  - 78c64469737be824f03d090c17d0c97c80255062
-  - ec725804dd41b2d8727f05501b168924c089d217
-  - bf239eae7ba564742267a318ed2e30f6aee94d03
+  commits: []
 - date: '20260807.194927'
   summary: done=8 running=0 pending=0 blocked=0
+  commits: []
 - date: '20260802.030806'
   summary: done=8 running=0 pending=0 blocked=0
+  commits: []

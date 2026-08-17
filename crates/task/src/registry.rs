@@ -2,7 +2,7 @@ use crate::checkpoint::CheckpointStore;
 use crate::task::Task;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracers_core::TraceErr;
+use trace_lang_core::TraceErr;
 use uuid::Uuid;
 
 /// The runtime task graph.
@@ -53,7 +53,7 @@ impl TaskRegistry {
     pub fn complete(
         &mut self,
         id: Uuid,
-        trace_ref: tracers_core::TraceRef,
+        trace_ref: trace_lang_core::TraceRef,
         store: &impl CheckpointStore,
     ) -> Result<(), TraceErr> {
         if let Some(task) = self.tasks.get_mut(&id) {
@@ -162,7 +162,7 @@ mod tests {
         registry
             .get_mut(dep_id)
             .unwrap()
-            .complete(tracers_core::TraceRef(Uuid::new_v4()));
+            .complete(trace_lang_core::TraceRef(Uuid::new_v4()));
 
         let ready_titles: Vec<_> = registry.ready_tasks().iter().map(|t| &t.title).collect();
         assert_eq!(ready_titles, vec!["dependent"]);
@@ -206,11 +206,11 @@ mod tests {
         registry
             .get_mut(done_id)
             .unwrap()
-            .complete(tracers_core::TraceRef(Uuid::new_v4()));
-        registry
-            .get_mut(failed_id)
-            .unwrap()
-            .fail(TraceErr::other("x"), tracers_core::TraceRef(Uuid::new_v4()));
+            .complete(trace_lang_core::TraceRef(Uuid::new_v4()));
+        registry.get_mut(failed_id).unwrap().fail(
+            TraceErr::other("x"),
+            trace_lang_core::TraceRef(Uuid::new_v4()),
+        );
 
         assert_eq!(registry.pending().len(), 1);
         assert_eq!(registry.done().len(), 1);

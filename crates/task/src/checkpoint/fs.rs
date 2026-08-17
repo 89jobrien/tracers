@@ -1,6 +1,6 @@
 use super::CheckpointStore;
 use std::path::{Path, PathBuf};
-use tracers_core::TraceErr;
+use trace_lang_core::TraceErr;
 
 /// A [`CheckpointStore`] backed by a single file on disk.
 pub struct FileCheckpointStore {

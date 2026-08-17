@@ -8,10 +8,10 @@
 
 # Crates
 
-- [tracers-core](./crates/tracers-core.md)
-- [tracers-task](./crates/tracers-task.md)
-- [tracers-agent](./crates/tracers-agent.md)
-- [tracers-runtime](./crates/tracers-runtime.md)
+- [trace-lang-core](./crates/trace-lang-core.md)
+- [trace-lang-task](./crates/trace-lang-task.md)
+- [trace-lang-agent](./crates/trace-lang-agent.md)
+- [trace-lang-runtime](./crates/trace-lang-runtime.md)
 
 # Reference
 

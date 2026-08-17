@@ -1,13 +1,13 @@
 //! Integration test: `assert_trace!` against the real
 //! `Guesser -> Careful -> Expert` escalation chain from
-//! `tracers_runtime::fixtures` — the same flow proven end-to-end by
+//! `trace_lang_runtime::fixtures` — the same flow proven end-to-end by
 //! `crates/runtime/tests/escalation_wiring.rs`, now also asserted on
 //! shape (not just final value) via `trace-test`.
 
 use std::sync::Arc;
-use tracers_runtime::fixtures::{Careful, Expert, Guesser};
-use tracers_runtime::{AgentRegistry, run_with_escalation};
-use tracers_trace_test::assert_trace;
+use trace_lang_runtime::fixtures::{Careful, Expert, Guesser};
+use trace_lang_runtime::{AgentRegistry, run_with_escalation};
+use trace_lang_test::assert_trace;
 
 #[tokio::test]
 async fn full_escalation_chain_has_expected_shape() {

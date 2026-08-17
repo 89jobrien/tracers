@@ -1,4 +1,4 @@
-//! `tracers-core` — reasoning provenance as a first-class value.
+//! `trace-lang-core` — reasoning provenance as a first-class value.
 //!
 //! Every computation in a trace:: program returns `Trace<T>` rather than bare `T`.
 //! The trace carries the full causal chain: steps taken, branches rejected,
@@ -7,7 +7,7 @@
 //! # Quick start
 //!
 //! ```rust
-//! use tracers_core::{Trace, Step, TraceErr};
+//! use trace_lang_core::{Trace, Step, TraceErr};
 //!
 //! let mut t = Trace::new("hello world");
 //! t.push_step(Step::named("greet").with_confidence(0.97));

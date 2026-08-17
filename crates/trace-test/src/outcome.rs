@@ -5,9 +5,9 @@
 //! they're looking at.
 
 use serde::Serialize;
-use tracers_agent::SpawnOutcome;
-use tracers_core::Trace;
-use tracers_runtime::RunOutcome;
+use trace_lang_agent::SpawnOutcome;
+use trace_lang_core::Trace;
+use trace_lang_runtime::RunOutcome;
 
 /// Port: anything `assert_trace!` can inspect.
 ///
@@ -44,7 +44,7 @@ impl<O: Clone + Serialize> TraceOutcome<O> for RunOutcome<O> {
 /// calling them twice returns the same data. Gated behind `test-support`
 /// so downstream crates can assert new `TraceOutcome` impls conform
 /// without depending on this crate's `#[cfg(test)]` code (same pattern as
-/// `tracers_task::checkpoint::conformance::assert_checkpoint_store_contract`).
+/// `trace_lang_task::checkpoint::conformance::assert_checkpoint_store_contract`).
 #[cfg(any(test, feature = "test-support"))]
 pub fn assert_trace_outcome_contract<O: Clone + Serialize, T: TraceOutcome<O>>(outcome: &T) {
     let chain_a = outcome.delegation_chain().to_vec();
@@ -62,8 +62,8 @@ pub fn assert_trace_outcome_contract<O: Clone + Serialize, T: TraceOutcome<O>>(o
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tracers_agent::spawn;
-    use tracers_runtime::fixtures::{Expert, Guesser};
+    use trace_lang_agent::spawn;
+    use trace_lang_runtime::fixtures::{Expert, Guesser};
 
     #[tokio::test]
     async fn spawn_outcome_exposes_trace_and_delegation_chain() {
@@ -74,7 +74,7 @@ mod tests {
 
     #[tokio::test]
     async fn run_outcome_exposes_trace_and_delegation_chain() {
-        use tracers_runtime::{AgentRegistry, run_with_escalation};
+        use trace_lang_runtime::{AgentRegistry, run_with_escalation};
 
         let registry: AgentRegistry<(), &'static str> = AgentRegistry::new();
         let outcome = run_with_escalation(&Guesser, (), &registry, 5).await;
@@ -89,7 +89,7 @@ mod tests {
 
     #[tokio::test]
     async fn run_outcome_satisfies_trace_outcome_contract() {
-        use tracers_runtime::{AgentRegistry, run_with_escalation};
+        use trace_lang_runtime::{AgentRegistry, run_with_escalation};
 
         let registry: AgentRegistry<(), &'static str> = AgentRegistry::new();
         let outcome = run_with_escalation(&Guesser, (), &registry, 5).await;

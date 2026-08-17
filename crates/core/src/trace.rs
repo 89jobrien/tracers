@@ -6,7 +6,7 @@ use uuid::Uuid;
 // TODO: add a `TraceGraph` type (docs/ideas/FEATURES.md #7) for cross-trace
 // lineage — `{ nodes: HashMap<TraceRef, TraceNode>, edges: Vec<(TraceRef,
 // TraceRef)> }` with `record_edge`/`downstream_of`/`upstream_of`/
-// `critical_path()`. Distinct from `Task::depends_on` in tracers-task,
+// `critical_path()`. Distinct from `Task::depends_on` in trace-lang-task,
 // which is the same idea one level up.
 
 /// A stable reference to a completed trace, safe to store in a `Task`

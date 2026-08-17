@@ -8,7 +8,7 @@ Agent context for working in this repository.
 
 1. A **language design** — `trace::`, a programming language where `Trace<T>` is a first-class type carrying full execution provenance. The design lives in `README.md` and the tutorial artifacts.
 
-2. A **Rust reference implementation** — `tracers-core` and `tracers-task` are real, usable crates that implement the core types. They compile today and can be depended on.
+2. A **Rust reference implementation** — `trace-lang-core` and `trace-lang-task` are real, usable crates that implement the core types. They compile today and can be depended on.
 
 ## crate map
 
@@ -35,7 +35,7 @@ crates/
   the escalation themselves — `spawn`/`delegate` evaluate hooks, callers act on them
 - `delegate()` extends `AgentContext::delegation_chain` rather than replacing it, so a
   multi-agent handoff is always reconstructable from the context alone
-- `spawn`/`delegate` in `tracers-agent` take `A: Agent + ?Sized`, so `tracers-runtime`'s
+- `spawn`/`delegate` in `trace-lang-agent` take `A: Agent + ?Sized`, so `trace-lang-runtime`'s
   `AgentRegistry<I, O>` can call them with `&dyn Agent<Input = I, Output = O>` — no logic
   duplicated between the sized and trait-object paths
 - `AgentRegistry<I, O>` is keyed by `Agent::name()` and constrains all registered agents to
@@ -60,8 +60,8 @@ cargo doc --workspace --open     # browse docs
 
 ## conventions
 
-- Hexagonal architecture: keep domain logic in `tracers-core` and `tracers-task` free of any runtime/IO
-- `tracers-core` must not depend on `tracers-task` (the dependency flows one way)
+- Hexagonal architecture: keep domain logic in `trace-lang-core` and `trace-lang-task` free of any runtime/IO
+- `trace-lang-core` must not depend on `trace-lang-task` (the dependency flows one way)
 - Builder pattern for all public types (see `Task::with_priority()`, `Step::with_confidence()`)
 - No `unwrap()` in library code — use `?` or explicit error handling
 
@@ -84,6 +84,6 @@ cargo doc --workspace --open     # browse docs
 ## related repos
 
 - `agent_trace` — the personal crate that inspired `Trace<T>`; design reference
-- `doob` — agent-first task CLI; `tracers-task` could serve as its storage model
+- `doob` — agent-first task CLI; `trace-lang-task` could serve as its storage model
 - `orca-strait` — parallel TDD orchestrator; could consume `TaskRegistry::ready_tasks()`
 - `atelier` — Claude Code workflow plugin; drives this repo's development sessions

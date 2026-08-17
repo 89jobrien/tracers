@@ -47,7 +47,7 @@ description = "Coverage for every workspace crate, one run each, fails on first 
 run = """
 #!/usr/bin/env bash
 set -euo pipefail
-for pkg in tracers-core tracers-task tracers-agent tracers-runtime; do
+for pkg in trace-lang-core trace-lang-task trace-lang-agent trace-lang-runtime; do
   echo "=== coverage: $pkg ==="
   taskit coverage --crate-name "$pkg"
 done

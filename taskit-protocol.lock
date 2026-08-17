@@ -3,29 +3,29 @@
   "algorithm": "sha256-normalized-core-contract-v1",
   "surfaces": [
     {
-      "name": "tracers-agent-agent",
+      "name": "trace-lang-agent-agent",
       "path": "crates/agent/src/agent.rs",
-      "hash": "533b90011dc0b9ca17e9bf896e53adc2e7a31e23fefbf4403906bfd562acb7a2"
+      "hash": "dda13a95cddfeac12570aef2250b061b19d0aa9811a24dc38253a96cbc3109f2"
     },
     {
-      "name": "tracers-core-error",
+      "name": "trace-lang-core-error",
       "path": "crates/core/src/error.rs",
       "hash": "6b0fde3197eea3089ba7492352dba534b1b48c6566a09f9f28eb7226f11c83f9"
     },
     {
-      "name": "tracers-core-trace",
+      "name": "trace-lang-core-trace",
       "path": "crates/core/src/trace.rs",
       "hash": "ca1fef59f9d7e63248aa51c659cf819e46322d402653d666c3e716d966a0dfe1"
     },
     {
-      "name": "tracers-task-checkpoint",
+      "name": "trace-lang-task-checkpoint",
       "path": "crates/task/src/checkpoint/mod.rs",
-      "hash": "43753e2330c202b96f66b20d98d62a7c6e484b2dc1d1a805f56d5b77b9c0f180"
+      "hash": "676b6c5f3931c353b5725b222c5ee744b99fc962bcaf6340f6734ca73769464b"
     },
     {
-      "name": "tracers-task-registry",
+      "name": "trace-lang-task-registry",
       "path": "crates/task/src/registry.rs",
-      "hash": "56852053b1fa99a5fbc14890db536dfee1c29061b49b668eb883227ecfbc387b"
+      "hash": "79d5d502d81e3e001210d0e38863d0975ca1c56473822fb4105e218c34b1361e"
     }
   ]
 }

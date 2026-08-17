@@ -7,8 +7,8 @@
 //! of a fixture written to make its own macro look good.
 
 use async_trait::async_trait;
-use tracers_agent::{Agent, AgentContext, EscalationAction};
-use tracers_core::{Step, Trace};
+use trace_lang_agent::{Agent, AgentContext, EscalationAction};
+use trace_lang_core::{Step, Trace};
 
 /// Always produces a low-confidence step, escalating to "Careful".
 pub struct Guesser;

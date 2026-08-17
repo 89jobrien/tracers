@@ -1,7 +1,7 @@
 use serde::Serialize;
 use std::sync::Arc;
-use tracers_agent::{Agent, spawn};
-use tracers_core::{Branch, Step, Trace};
+use trace_lang_agent::{Agent, spawn};
+use trace_lang_core::{Branch, Step, Trace};
 
 // TODO: thread-parallel variant via `tokio::spawn` (see matching TODO in
 // join.rs), and `speculate_race` — early-exit once a candidate crosses a
@@ -28,9 +28,9 @@ use tracers_core::{Branch, Step, Trace};
 /// over.
 ///
 /// ```rust
-/// use tracers_agent::{Agent, AgentContext};
-/// use tracers_core::{Step, Trace};
-/// use tracers_runtime::speculate;
+/// use trace_lang_agent::{Agent, AgentContext};
+/// use trace_lang_core::{Step, Trace};
+/// use trace_lang_runtime::speculate;
 /// use async_trait::async_trait;
 /// use std::sync::Arc;
 ///
@@ -163,8 +163,8 @@ where
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use tracers_agent::AgentContext;
-    use tracers_core::TraceErr;
+    use trace_lang_agent::AgentContext;
+    use trace_lang_core::TraceErr;
 
     struct Scored(&'static str, f64);
 

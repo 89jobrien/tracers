@@ -11,7 +11,7 @@ pub mod conformance;
 
 pub use fs::FileCheckpointStore;
 
-use tracers_core::TraceErr;
+use trace_lang_core::TraceErr;
 
 /// A place a [`crate::TaskRegistry`] can be checkpointed to and restored from.
 ///

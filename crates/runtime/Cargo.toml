@@ -1,5 +1,5 @@
 [package]
-name        = "tracers-runtime"
+name        = "trace-lang-runtime"
 description = "Agent registry, delegation resolution, parallel fan-out, and speculative branching for trace::"
 version.workspace    = true
 edition.workspace    = true
@@ -8,8 +8,8 @@ license.workspace    = true
 repository.workspace = true
 
 [dependencies]
-tracers-core  = { path = "../core" }
-tracers-agent = { path = "../agent" }
+trace-lang-core  = { version = "0.1.1", path = "../core" }
+trace-lang-agent = { version = "0.1.1", path = "../agent" }
 serde         = { workspace = true }
 futures       = { workspace = true }
 async-trait   = { workspace = true, optional = true }
@@ -23,10 +23,7 @@ proptest    = { workspace = true }
 # (cfg(test) does not apply), so `fixtures` needs the feature explicitly.
 # Cargo unifies this with the main [dependencies] entry during test builds;
 # it does not affect real downstream consumers, who never enable it.
-# TODO: needs an explicit `version = "0.1.1"` before the first `cargo
-# publish` — a path-only self-dependency has nothing to fall back to once
-# `path` is stripped during publish verification.
-tracers-runtime = { path = ".", features = ["test-support"] }
+trace-lang-runtime = { version = "0.1.1", path = ".", features = ["test-support"] }
 
 [features]
 test-support = ["dep:async-trait"]

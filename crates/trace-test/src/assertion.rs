@@ -2,7 +2,7 @@
 //! Failures render `TraceAssertionError` via `miette`, embedding the
 //! actual causal chain so a failure is debuggable without re-running
 //! under a debugger — the same rich-diagnostics style as
-//! `tracers_core::TraceErr` (see `crates/core/src/error.rs`).
+//! `trace_lang_core::TraceErr` (see `crates/core/src/error.rs`).
 
 /// Assert the shape of an agent execution — which steps ran, at what
 /// confidence, whether it escalated to a specific agent, whether some
@@ -163,8 +163,8 @@ pub fn never_step<O: Clone + Serialize, T: TraceOutcome<O>>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tracers_agent::spawn;
-    use tracers_runtime::fixtures::{Careful, Expert, Guesser};
+    use trace_lang_agent::spawn;
+    use trace_lang_runtime::fixtures::{Careful, Expert, Guesser};
 
     #[tokio::test]
     async fn assert_trace_macro_runs_all_checks_and_panics_on_first_failure() {
@@ -218,7 +218,7 @@ mod tests {
 
     #[tokio::test]
     async fn escalates_to_passes_when_agent_in_delegation_chain() {
-        use tracers_runtime::{AgentRegistry, run_with_escalation};
+        use trace_lang_runtime::{AgentRegistry, run_with_escalation};
         let mut registry: AgentRegistry<(), &'static str> = AgentRegistry::new();
         registry.register(std::sync::Arc::new(Careful));
         registry.register(std::sync::Arc::new(Expert));
@@ -250,10 +250,10 @@ mod tests {
         ));
     }
 
-    struct FakeOutcome(tracers_core::Trace<()>);
+    struct FakeOutcome(trace_lang_core::Trace<()>);
 
     impl TraceOutcome<()> for FakeOutcome {
-        fn trace(&self) -> &tracers_core::Trace<()> {
+        fn trace(&self) -> &trace_lang_core::Trace<()> {
             &self.0
         }
         fn delegation_chain(&self) -> &[String] {
@@ -267,8 +267,8 @@ mod tests {
             confidence in proptest::option::of(-10.0f64..10.0),
             threshold in -10.0f64..10.0,
         ) {
-            let mut trace = tracers_core::Trace::new(());
-            let mut step = tracers_core::Step::named("probe");
+            let mut trace = trace_lang_core::Trace::new(());
+            let mut step = trace_lang_core::Step::named("probe");
             step.confidence = confidence.map(|c| c.clamp(0.0, 1.0));
             trace.push_step(step);
             let outcome = FakeOutcome(trace);

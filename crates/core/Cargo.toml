@@ -1,5 +1,5 @@
 [package]
-name        = "tracers-core"
+name        = "trace-lang-core"
 description = "Core Trace<T> type — reasoning provenance as a first-class value"
 version.workspace    = true
 edition.workspace    = true

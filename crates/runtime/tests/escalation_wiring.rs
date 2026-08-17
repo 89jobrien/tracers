@@ -1,13 +1,13 @@
-//! Integration test: `tracers-agent`'s lifecycle hooks wired through
-//! `tracers-runtime`'s `AgentRegistry` and `run_with_escalation`, chaining
+//! Integration test: `trace-lang-agent`'s lifecycle hooks wired through
+//! `trace-lang-runtime`'s `AgentRegistry` and `run_with_escalation`, chaining
 //! two real delegation hops across a low-confidence escalation and a
 //! budget-exhaustion escalation before a third agent finally succeeds.
 
 use std::sync::Arc;
-use tracers_agent::EscalationAction;
-use tracers_core::TraceErr;
-use tracers_runtime::fixtures::{Careful, Expert, Guesser};
-use tracers_runtime::{AgentRegistry, run_with_escalation};
+use trace_lang_agent::EscalationAction;
+use trace_lang_core::TraceErr;
+use trace_lang_runtime::fixtures::{Careful, Expert, Guesser};
+use trace_lang_runtime::{AgentRegistry, run_with_escalation};
 
 #[tokio::test]
 async fn escalation_chain_hops_through_two_registered_agents_to_success() {

@@ -1,4 +1,4 @@
-use tracers_agent::{Agent, SpawnOutcome, spawn};
+use trace_lang_agent::{Agent, SpawnOutcome, spawn};
 
 // TODO: thread-parallel variant via `tokio::spawn` — needs `'static` agents
 // (`Arc<dyn Agent<...>>` everywhere), a bigger API change than this fn alone.
@@ -14,9 +14,9 @@ use tracers_agent::{Agent, SpawnOutcome, spawn};
 /// variant is tracked as future work.
 ///
 /// ```rust
-/// use tracers_agent::{Agent, AgentContext};
-/// use tracers_core::Trace;
-/// use tracers_runtime::join_all;
+/// use trace_lang_agent::{Agent, AgentContext};
+/// use trace_lang_core::Trace;
+/// use trace_lang_runtime::join_all;
 /// use async_trait::async_trait;
 ///
 /// struct Doubler;
@@ -50,8 +50,8 @@ where
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use tracers_agent::AgentContext;
-    use tracers_core::Trace;
+    use trace_lang_agent::AgentContext;
+    use trace_lang_core::Trace;
 
     struct Doubler;
 

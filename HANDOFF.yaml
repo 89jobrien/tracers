@@ -10,7 +10,7 @@ items:
   - id: 1
     title: "Resolve runtime self-dependency version constraint before first publish"
     description: >
-      tracers-runtime depends on itself for testing but has no explicit
+      trace-lang-runtime depends on itself for testing but has no explicit
       version constraint. This needs to be formalized in Cargo.toml with
       a proper version specification before publishing to crates.io.
     priority: P1
