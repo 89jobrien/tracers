@@ -8,7 +8,7 @@ license.workspace    = true
 repository.workspace = true
 
 [dependencies]
-trace-lang-core = { version = "0.1.1", path = "../core" }
+trace-lang-core = { version = "1.0.0", path = "../core" }
 serde        = { workspace = true }
 async-trait  = { workspace = true }
 

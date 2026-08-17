@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.0.0] - 2026-08-17
+
+### Features
+
+- Rename crates to trace-lang-* for crates.io publish
+
 ## [0.1.1] - 2026-08-17
 
 ### Documentation
