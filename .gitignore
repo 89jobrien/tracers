@@ -22,3 +22,7 @@ Cargo.lock
 .ctx/.initialized
 # handoff-end
 .taskit/telemetry/2026/08/08/
+
+# macOS / session junk
+.DS_Store
+session-report-*.html

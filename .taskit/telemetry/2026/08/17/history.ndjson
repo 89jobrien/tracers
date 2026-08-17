@@ -1,0 +1,2 @@
+{"timestamp":"2026-08-17T10:19:21Z","git_sha":"226cf61a2abc5d47d7d8bdd216598a0ac185c44e","metrics":[{"name":"ci_duration_ms","value":863.0},{"name":"ci_passed","value":1.0}]}
+{"timestamp":"2026-08-17T10:20:07Z","git_sha":"226cf61a2abc5d47d7d8bdd216598a0ac185c44e","metrics":[{"name":"ci_duration_ms","value":917.0},{"name":"ci_passed","value":1.0}]}
