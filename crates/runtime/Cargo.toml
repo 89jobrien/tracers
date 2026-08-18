@@ -1,5 +1,5 @@
 [package]
-name        = "tracers-runtime"
+name        = "trace-lang-runtime"
 description = "Agent registry, delegation resolution, parallel fan-out, and speculative branching for trace::"
 version.workspace    = true
 edition.workspace    = true
@@ -8,15 +8,29 @@ license.workspace    = true
 repository.workspace = true
 
 [dependencies]
-tracers-core  = { path = "../core" }
-tracers-agent = { path = "../agent" }
+trace-lang-core  = { version = "0.2.1", path = "../core" }
+trace-lang-agent = { version = "0.2.1", path = "../agent" }
 serde         = { workspace = true }
 futures       = { workspace = true }
+async-trait   = { workspace = true, optional = true }
 
 [dev-dependencies]
 tokio       = { workspace = true }
 async-trait = { workspace = true }
 proptest    = { workspace = true }
+# Self-dependency enabling this crate's own `test-support` feature for its
+# `tests/` integration binaries — those see the lib as an external consumer
+# (cfg(test) does not apply), so `fixtures` needs the feature explicitly.
+# Cargo unifies this with the main [dependencies] entry during test builds;
+# it does not affect real downstream consumers, who never enable it.
+# Deliberately path-only (no `version`): cargo strips path-only dev-deps
+# from the published manifest, which is exactly right — a versioned
+# self-dep can't resolve during a first publish (the crate isn't in the
+# index yet) and consumers never need it.
+trace-lang-runtime = { path = ".", features = ["test-support"] }
+
+[features]
+test-support = ["dep:async-trait"]
 
 [lints.rust]
 unexpected_cfgs = { level = "allow", check-cfg = ["cfg(kani)"] }

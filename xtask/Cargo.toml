@@ -1,5 +1,6 @@
 [package]
 name = "xtask"
 version = "0.1.0"
+# TODO: bump to edition = "2024" to match the rest of the workspace.
 edition = "2021"
 publish = false

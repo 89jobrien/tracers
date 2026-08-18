@@ -1,3 +1,3 @@
-# tracers-core
+# trace-lang-core
 
 <!-- Crate documentation -->

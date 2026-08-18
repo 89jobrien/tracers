@@ -1,4 +1,4 @@
-use tracers_core::TraceErr;
+use trace_lang_core::TraceErr;
 
 /// Per-run state threaded through [`crate::Agent::run`].
 ///
@@ -94,7 +94,7 @@ mod tests {
         let err = ctx.record_step().expect_err("third step exceeds budget");
         assert!(matches!(
             err,
-            tracers_core::TraceErr::BudgetExhausted { steps: 3 }
+            trace_lang_core::TraceErr::BudgetExhausted { steps: 3 }
         ));
     }
 

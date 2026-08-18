@@ -1,42 +1,75 @@
 [workspace]
 # root = "/path/to/workspace"  # defaults to Cargo.toml location
 crates = [
-  { dir = "crates/core", pkg = "tracers-core" },
-  { dir = "crates/task", pkg = "tracers-task" },
-  { dir = "crates/agent", pkg = "tracers-agent" },
-  { dir = "crates/runtime", pkg = "tracers-runtime" },
+  { dir = "crates/core", pkg = "trace-lang-core" },
+  { dir = "crates/task", pkg = "trace-lang-task" },
+  { dir = "crates/agent", pkg = "trace-lang-agent" },
+  { dir = "crates/runtime", pkg = "trace-lang-runtime" },
+  { dir = "crates/trace-test", pkg = "trace-lang-test" },
 ]
 # offline_skip = "test(/.*network.*/)"
 
 
 [[workspace.propagation]]
-source = "tracers-agent"
-dependents = ["tracers-runtime"]
+source = "trace-lang-agent"
+dependents = ["trace-lang-runtime"]
 
 [[workspace.propagation]]
-source = "tracers-core"
-dependents = ["tracers-task", "tracers-agent", "tracers-runtime"]
+source = "trace-lang-core"
+dependents = ["trace-lang-task", "trace-lang-agent", "trace-lang-runtime"]
+
+[[workspace.propagation]]
+source = "trace-lang-core"
+dependents = ["trace-lang-test"]
+
+[[workspace.propagation]]
+source = "trace-lang-agent"
+dependents = ["trace-lang-test"]
+
+[[workspace.propagation]]
+source = "trace-lang-runtime"
+dependents = ["trace-lang-test"]
 
 [protocol]
 # lockfile = "taskit-protocol.lock"
 
 [[protocol.surfaces]]
-name = "tracers-agent-agent"
+name = "trace-lang-agent-agent"
 path = "crates/agent/src/agent.rs"
 
 [[protocol.surfaces]]
-name = "tracers-core-error"
+name = "trace-lang-core-error"
 path = "crates/core/src/error.rs"
 
-# Coverage enforcement: run `taskit coverage` to check.
+[[protocol.surfaces]]
+name = "trace-lang-core-trace"
+path = "crates/core/src/trace.rs"
+
+[[protocol.surfaces]]
+name = "trace-lang-task-checkpoint"
+path = "crates/task/src/checkpoint/mod.rs"
+
+[[protocol.surfaces]]
+name = "trace-lang-task-registry"
+path = "crates/task/src/registry.rs"
+
+# TODO: add surfaces for crates/agent/src/context.rs (budget enforcement) and
+# crates/runtime/src/speculate.rs (the tie-breaking fold CLAUDE.md calls out
+# as a past bug source, caught only by a unit test) — both are load-bearing
+# invariants not currently tracked for drift.
+
+# Coverage enforcement: run `taskit coverage --crate-name <pkg>` to check.
+# taskit's [coverage] block only supports one crate at a time, so this stays
+# unset here; run per-crate via `taskit coverage --crate-name trace-lang-core`
+# (etc.) until a workspace-wide baseline is established.
 #
 # [coverage]
 # crate_name = "my-crate"
 # threshold = 80.0
 
 [ci]
-# cruxfile  = "Cruxfile"  # path to Cruxfile for crux-based pipelines
-# fail_fast = false        # stop on first failing step
+cruxfile   = "Cruxfile"
+fail_fast  = true
 
 [[ci.steps]]
 name = "self-check"
@@ -46,12 +79,12 @@ gate = true
 [[ci.steps]]
 name = "fmt --check"
 cmd = "fmt --check"
-gate = false
+gate = true
 
 [[ci.steps]]
 name = "lint"
 cmd = "lint"
-gate = false
+gate = true
 
 [[ci.steps]]
 name = "compile-tests"
@@ -61,47 +94,57 @@ gate = false
 [[ci.steps]]
 name = "test"
 cmd = "test"
-gate = false
+gate = true
 
 [[ci.steps]]
 name = "check-deps"
 cmd = "check-deps"
-gate = false
+gate = true
 
 [[ci.steps]]
 name = "check-protocol-drift"
 cmd = "check-protocol-drift"
-gate = false
+gate = true
+
+# TODO: add "bench" and "fuzz" steps once benches/ and fuzz/ exist — both
+# `taskit bench` and `taskit fuzz` are already available subcommands, just
+# unused; see the matching TODOs in crates/core/src/lib.rs.
 
 # Metric thresholds for `taskit inspect`. CLI flags override these.
-#
-# [inspect]
-# max_clippy_warnings = 0
-# max_clippy_errors   = 0
-# max_test_failures   = 0
-# max_todo_fixme      = 20   # omit to skip the TODO/FIXME check
+# max_todo_fixme raised from 0: a gm-ideate pass seeded TODO markers for
+# every open backlog idea (tracked, not drift) — revisit downward as each
+# one is resolved.
+[inspect]
+max_clippy_warnings = 0
+max_clippy_errors   = 0
+max_test_failures   = 0
+max_todo_fixme      = 20
 
 # Default retention policy for `taskit clean`. CLI --older-than overrides.
-#
-# [clean]
-# older_than = "7d"  # use `cargo sweep`; omit to run `cargo clean`
+[clean]
+older_than = "7d"  # use `cargo sweep`; omit to run `cargo clean`
 
 # Git flow: main -> develop (work) -> staging (integration) -> release (publish) -> main
-# These are the defaults; uncomment to customize branch names.
-#
-# [flow]
-# main = "main"
-# develop = "develop"
-# staging = "staging"
-# release = "release"
+# develop/staging/release branches now exist (created off main) so `taskit
+# flow auto` can run the full pipeline.
+[flow]
+main = "main"
+develop = "develop"
+staging = "staging"
+release = "release"
 
 [release]
+# TODO: add CHANGELOG.md, updated as part of `taskit patch`/`minor`/`major` —
+# nothing currently captures what changed between version bumps.
 # github_repo = "owner/repo"  # auto-detected from git remote
 publish_order = [
-  "tracers-core",
-  "tracers-agent",
-  "tracers-task",
-  "tracers-runtime",
+  "trace-lang-core",
+  "trace-lang-agent",
+  "trace-lang-task",
+  "trace-lang-runtime",
 ]
 # skip_docs   = false  # skip `cargo doc` before publishing
 # allow_dirty = false  # publish with uncommitted changes
+
+[output]
+default_format = "sarif"

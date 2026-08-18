@@ -1,7 +1,7 @@
-//! `tracers-runtime` — agent registry, delegation resolution, parallel
+//! `trace-lang-runtime` — agent registry, delegation resolution, parallel
 //! fan-out, and speculative branching for trace:: pipelines.
 //!
-//! `tracers-agent` defines *what* an agent should do when it needs to
+//! `trace-lang-agent` defines *what* an agent should do when it needs to
 //! escalate (`EscalationAction::Delegate("SeniorCoder")`), but
 //! resolving a name into a live agent and actually running it is a
 //! runtime concern — that's what this crate adds:
@@ -13,7 +13,7 @@
 //! - [`join_all`] — runs one agent concurrently over many inputs
 //! - [`speculate`] — runs several *different* candidate agents
 //!   concurrently over the same input and picks a winner by confidence,
-//!   recording the losers as rejected [`tracers_core::Branch`]es
+//!   recording the losers as rejected [`trace_lang_core::Branch`]es
 //!
 //! # Known limitation
 //!
@@ -28,6 +28,13 @@ pub mod execute;
 pub mod join;
 pub mod registry;
 pub mod speculate;
+
+/// Real agent fixtures for shared use across this crate's tests and, via
+/// the `test-support` feature, downstream crates' tests (see
+/// `crates/task/src/checkpoint/mod.rs`'s `conformance` module for the
+/// identical precedent).
+#[cfg(any(test, feature = "test-support"))]
+pub mod fixtures;
 
 pub use execute::{RunOutcome, run_with_escalation};
 pub use join::join_all;

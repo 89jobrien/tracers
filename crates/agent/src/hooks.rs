@@ -1,4 +1,4 @@
-use tracers_core::TraceErr;
+use trace_lang_core::TraceErr;
 
 /// The declarative outcome of a lifecycle hook
 /// (`on_low_confidence`, `on_budget_exceeded`, `on_step_failure`).

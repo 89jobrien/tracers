@@ -2,7 +2,7 @@ use crate::context::AgentContext;
 use crate::hooks::EscalationAction;
 use async_trait::async_trait;
 use serde::Serialize;
-use tracers_core::Trace;
+use trace_lang_core::Trace;
 
 /// The unit of computation in trace::.
 ///
@@ -16,6 +16,11 @@ use tracers_core::Trace;
 /// [`EscalationAction`] rather than performing the escalation
 /// themselves. `spawn()` evaluates the resulting trace against these
 /// hooks after `run()` completes.
+///
+// TODO: add `contract!` step pre/post-conditions here (see
+// docs/ideas/FEATURES.md #6) — `Contract<I, O> { pre, post }` closures
+// whose violation produces `StepOutcome::Failed`, proposed to live
+// directly in this crate rather than a new one.
 #[async_trait]
 pub trait Agent: Send + Sync {
     /// The type consumed by this agent's `run` step.
