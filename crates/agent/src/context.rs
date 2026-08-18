@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use trace_lang_core::TraceErr;
 
 /// Per-run state threaded through [`crate::Agent::run`].
@@ -6,7 +7,7 @@ use trace_lang_core::TraceErr;
 /// the delegation chain — the ordered list of agent names that handed
 /// off execution to reach this point. `spawn()` starts a fresh chain;
 /// `delegate()` extends the caller's chain.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentContext {
     pub agent_name: String,
     pub steps_taken: usize,

@@ -10,6 +10,7 @@ use std::time::{Duration, Instant};
 /// // ... do work ...
 /// let duration = span.finish();
 /// ```
+#[derive(Debug, Clone)]
 pub struct Span {
     /// Label identifying the timed region.
     pub name: String,
