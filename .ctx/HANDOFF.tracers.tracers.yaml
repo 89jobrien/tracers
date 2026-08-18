@@ -1,37 +1,34 @@
 project: tracers
 id: tracers
-updated: 2026-08-17
+updated: 2026-08-18
 items:
 - id: uncommitted-work
   doob_uuid: null
   name: uncommitted-work
   priority: P1
   status: open
-  title: Uncommitted changes (9 files)
+  title: Uncommitted changes (1 file)
   description: |-
     Working tree has uncommitted changes:
     .ctx/HANDOFF.tracers.tracers.yaml
-    .gitignore
-    .health-baseline.json
-    .taskit/telemetry/2026/08/16/history.ndjson
-    Cargo.toml
-    docs/designs/.DS_Store
-    scripts/release.nu
-    .ctx/HANDOFF.tracers.state.yaml
-    .taskit/telemetry/2026/08/17/
   files:
   - .ctx/HANDOFF.tracers.tracers.yaml
-  - .gitignore
-  - .health-baseline.json
-  - .taskit/telemetry/2026/08/16/history.ndjson
-  - Cargo.toml
-  - docs/designs/.DS_Store
-  - scripts/release.nu
-  - .ctx/HANDOFF.tracers.state.yaml
-  - .taskit/telemetry/2026/08/17/
   completed: null
   extra: []
 log:
+- date: '20260818.011940'
+  summary: done=18 running=0 pending=0 blocked=0
+  commits:
+  - !Sha b3bf4efe9537a878c6db0ffa0576aa4b97588cca
+  - !Sha b1e27794470f8a46db6d1ebfb622b59c0bd65377
+  - !Sha 6d67b20bf6457b2bbf479b5467d3a27904552deb
+  - !Sha 6f23b1bb29afbc1cc316d44371630a24687b04d5
+  - !Sha ab9ffcacd5fbaa92b76266e1aecf2817fc856b22
+  - !Sha 226cf61a2abc5d47d7d8bdd216598a0ac185c44e
+  - !Sha 2f1a64b3464fc39215a40a7b7250507329c87260
+  - !Sha cb8870522411d75b47378cbfde5aff83f07653ec
+  - !Sha e6d3bf2cc9dc14bdc488301aa2b527e10d03d17f
+  - !Sha 4d5558954270008087be7327bb30aeea4ebbedc2
 - date: '20260817.101922'
   summary: done=17 running=0 pending=1 blocked=0
   commits: []
