@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Miscellaneous
+
+- Enable post-auto push of main and flow branches
+- Rust-audit mechanical fixes - derives, docs, crate metadata
+
+## [0.2.1] - 2026-08-18
+
+### Bug Fixes
+
+- Make self dev-dependency path-only so first publish can resolve
+
 ## [0.2.0] - 2026-08-17
 
 ### Features

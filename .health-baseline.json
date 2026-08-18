@@ -1,5 +1,5 @@
 {
-  "date": "2026-08-16",
+  "date": "2026-08-18",
   "tests": {
     "total": 0,
     "passed": 0,
@@ -12,12 +12,12 @@
   },
   "todo_fixme": 10,
   "safety": {
-    "unwrap_count": 41,
+    "unwrap_count": 45,
     "warn_count": 0
   },
   "coverage": null,
-  "ci_duration_ms": 545.0,
+  "ci_duration_ms": 437.0,
   "crates": 6,
-  "versions_consistent": true,
-  "version": "0.1.0"
+  "versions_consistent": false,
+  "version": "0.2.1"
 }
