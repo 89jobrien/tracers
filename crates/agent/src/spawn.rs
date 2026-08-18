@@ -14,6 +14,7 @@ use trace_lang_core::{Trace, TraceErr};
 /// the same outcome type works whether the agent was invoked through a
 /// concrete `&A` or through a `&dyn Agent<Input = I, Output = O>` —
 /// see `trace-lang-runtime`'s `AgentRegistry` for the latter.
+#[derive(Debug)]
 pub struct SpawnOutcome<O> {
     pub trace: Trace<O>,
     pub context: AgentContext,

@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use trace_lang_core::TraceErr;
 
 /// A [`CheckpointStore`] backed by a single file on disk.
+#[derive(Debug, Clone)]
 pub struct FileCheckpointStore {
     path: PathBuf,
 }

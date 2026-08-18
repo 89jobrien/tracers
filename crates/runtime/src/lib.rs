@@ -11,13 +11,13 @@
 //!   any `Delegate` escalation against a registry, hopping up to a
 //!   caller-supplied limit
 //! - [`join_all`] — runs one agent concurrently over many inputs
-//! - [`speculate`] — runs several *different* candidate agents
+//! - [`speculate()`] — runs several *different* candidate agents
 //!   concurrently over the same input and picks a winner by confidence,
 //!   recording the losers as rejected [`trace_lang_core::Branch`]es
 //!
 //! # Known limitation
 //!
-//! [`join_all`] and [`speculate`] use `futures::future::join_all`,
+//! [`join_all`] and [`speculate()`] use `futures::future::join_all`,
 //! which polls concurrently on the current task rather than
 //! distributing across OS threads. True multi-threaded parallelism
 //! (via `tokio::spawn` and `'static` agents) and a shared step-budget

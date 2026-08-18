@@ -1,4 +1,10 @@
 #!/bin/sh
 # Delegate to taskit pre-push checks.
 # Install: git config core.hooksPath .githooks
+# Supports both CLI shapes: `taskit check pre-push` (new) and
+# `taskit pre-push` (old) — probe with --help so a real check failure
+# is never masked by falling back.
+if taskit check pre-push --help >/dev/null 2>&1; then
+    exec taskit check pre-push
+fi
 exec taskit pre-push

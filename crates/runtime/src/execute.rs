@@ -5,6 +5,7 @@ use trace_lang_core::Trace;
 
 /// Outcome of [`run_with_escalation`] — a run that may have hopped
 /// across multiple agents via delegation before settling.
+#[derive(Debug)]
 pub struct RunOutcome<O> {
     pub trace: Trace<O>,
     pub context: AgentContext,
