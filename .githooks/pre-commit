@@ -1,4 +1,10 @@
 #!/bin/sh
 # Delegate to taskit pre-commit checks.
 # Install: git config core.hooksPath .githooks
+# Supports both CLI shapes: `taskit check pre-commit` (new) and
+# `taskit pre-commit` (old) — probe with --help so a real check failure
+# is never masked by falling back.
+if taskit check pre-commit --help >/dev/null 2>&1; then
+    exec taskit check pre-commit
+fi
 exec taskit pre-commit

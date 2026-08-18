@@ -81,6 +81,14 @@ where
     }
 }
 
+impl<I, O> std::fmt::Debug for AgentRegistry<I, O> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AgentRegistry")
+            .field("agents", &self.agents.keys().collect::<Vec<_>>())
+            .finish()
+    }
+}
+
 impl<I, O> Default for AgentRegistry<I, O>
 where
     I: Send,

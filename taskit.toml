@@ -132,6 +132,9 @@ main = "main"
 develop = "develop"
 staging = "staging"
 release = "release"
+# Push main + flow branches to origin after a successful `taskit flow auto`
+# (requires taskit >= the feat(flow) push commit; older binaries ignore this).
+push = true
 
 [release]
 # TODO: add CHANGELOG.md, updated as part of `taskit patch`/`minor`/`major` —

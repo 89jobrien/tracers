@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 /// A single unit of reasoning. Every `observe`, `branch`, and `emit` in a
 /// trace:: agent produces a `Step` that is appended to the `Trace<T>`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Step {
     /// Unique identifier assigned via `Uuid::new_v4()` in `Step::named`.
     pub id: Uuid,
@@ -101,7 +101,7 @@ impl Step {
 /// A branch is a path that was *considered* — either taken or rejected.
 /// `speculate { A: .., B: .., C: .. }` produces one `Branch` per arm,
 /// with the winner marked `BranchOutcome::Taken` and losers `Rejected`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Branch {
     pub id: Uuid,
     pub label: String,
