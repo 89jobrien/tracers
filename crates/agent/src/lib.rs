@@ -1,4 +1,4 @@
-//! `tracers-agent` — the `Agent` trait, `spawn`/`delegate`, and lifecycle
+//! `trace-lang-agent` — the `Agent` trait, `spawn`/`delegate`, and lifecycle
 //! escalation hooks for trace:: pipelines.
 //!
 //! An `Agent` is the unit of computation in trace:: — it declares a goal,
@@ -19,8 +19,8 @@
 //!
 //! ```rust
 //! use async_trait::async_trait;
-//! use tracers_agent::{Agent, AgentContext, spawn};
-//! use tracers_core::{Trace, Step};
+//! use trace_lang_agent::{Agent, AgentContext, spawn};
+//! use trace_lang_core::{Trace, Step};
 //!
 //! struct Greeter;
 //!

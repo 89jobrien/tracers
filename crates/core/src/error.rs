@@ -12,12 +12,22 @@ use uuid::Uuid;
 pub enum TraceErr {
     /// A step called `reject()` — the branch was explicitly abandoned.
     #[error("rejected: {0}")]
-    #[diagnostic(code(trace::rejected))]
+    #[diagnostic(
+        code(trace::rejected),
+        help(
+            "this branch was explicitly abandoned via reject() — inspect the reason and, if unintended, adjust the step logic that called it"
+        )
+    )]
     Rejected(String),
 
     /// An external tool call returned an error.
     #[error("tool failed: {tool} — {message}")]
-    #[diagnostic(code(trace::tool_failed))]
+    #[diagnostic(
+        code(trace::tool_failed),
+        help(
+            "check the tool's availability and input, then retry the step or fall back to another tool"
+        )
+    )]
     ToolFailed { tool: String, message: String },
 
     /// The agent exceeded its declared step budget.
@@ -30,27 +40,52 @@ pub enum TraceErr {
 
     /// A delegated agent returned an error. The inner UUID is that agent's trace id.
     #[error("delegation failed (trace {trace_id}): {message}")]
-    #[diagnostic(code(trace::delegation_failed))]
+    #[diagnostic(
+        code(trace::delegation_failed),
+        help(
+            "inspect the delegate's trace ({trace_id}) for the root cause — the failure originated downstream, not in the delegating agent"
+        )
+    )]
     DelegationFailed { trace_id: Uuid, message: String },
 
     /// A step's confidence score fell below the agent's declared threshold.
     #[error("confidence too low: {score:.2} (threshold {threshold:.2})")]
-    #[diagnostic(code(trace::low_confidence))]
+    #[diagnostic(
+        code(trace::low_confidence),
+        help(
+            "either lower the agent's confidence threshold or improve the step's inputs so it can produce a higher-confidence result"
+        )
+    )]
     LowConfidence { score: f64, threshold: f64 },
 
     /// A step exceeded its time limit.
     #[error("step timed out after {duration:?}")]
-    #[diagnostic(code(trace::timeout))]
+    #[diagnostic(
+        code(trace::timeout),
+        help(
+            "raise the step's time limit if the work is legitimately slow, or investigate why it hung"
+        )
+    )]
     Timeout { duration: Duration },
 
     /// Serialization/deserialization failure (task or trace checkpoint).
     #[error("serialization error: {0}")]
-    #[diagnostic(code(trace::serde))]
+    #[diagnostic(
+        code(trace::serde),
+        help(
+            "the underlying serde_json error is embedded in the message above — check for a schema mismatch between the checkpoint on disk and the current type definitions"
+        )
+    )]
     Serde(String),
 
     /// Catch-all for errors that don't fit the above.
     #[error("{0}")]
-    #[diagnostic(code(trace::other))]
+    #[diagnostic(
+        code(trace::other),
+        help(
+            "this is an uncategorized TraceErr — consider adding a dedicated variant if this failure mode recurs"
+        )
+    )]
     Other(String),
 }
 

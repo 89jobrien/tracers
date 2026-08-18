@@ -2,8 +2,8 @@
 
 Thanks for your interest in `trace-lang`. This is an early-stage design + reference
 implementation — expect the language surface to be more stable as a discussion
-artifact than as running code, and the Rust crates (`tracers-core`, `tracers-task`,
-`tracers-agent`, `tracers-runtime`) to be the part that actually compiles and runs
+artifact than as running code, and the Rust crates (`trace-lang-core`, `trace-lang-task`,
+`trace-lang-agent`, `trace-lang-runtime`) to be the part that actually compiles and runs
 today.
 
 ## Before you start
@@ -26,9 +26,9 @@ issues in place.
 
 ### Conventions
 
-- Hexagonal architecture: keep domain logic in `tracers-core` and `tracers-task` free
+- Hexagonal architecture: keep domain logic in `trace-lang-core` and `trace-lang-task` free
   of any runtime/IO concern — I/O goes behind a port trait (see `CheckpointStore`).
-- `tracers-core` must not depend on `tracers-task` — the dependency graph flows one
+- `trace-lang-core` must not depend on `trace-lang-task` — the dependency graph flows one
   way: `core -> task`, `core -> agent -> runtime`.
 - Builder pattern for public types (`Task::with_priority()`, `Step::with_confidence()`).
 - No `unwrap()` in library code — use `?` or explicit error handling. `unwrap()` in

@@ -21,6 +21,9 @@ ignore = true
 [bans]
 multiple-versions = "warn"
 wildcards = "allow"
+# TODO: add a [[bans.skip]] entry for `unicode-width` — miette pulls 0.1.14
+# directly while its own dep textwrap pulls 0.2.2, producing a benign but
+# persistent duplicate-version warning on every `taskit audit`.
 
 [sources]
 unknown-registry = "warn"

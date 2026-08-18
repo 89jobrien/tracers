@@ -1,0 +1,24 @@
+[package]
+name        = "trace-lang-test"
+description = "Trace-shape assertions for trace:: agent tests — assert_trace! over Trace/AgentContext shape, not just final output"
+version.workspace    = true
+edition.workspace    = true
+authors.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[dependencies]
+trace-lang-core    = { path = "../core" }
+trace-lang-agent   = { path = "../agent" }
+trace-lang-runtime = { path = "../runtime" }
+serde           = { workspace = true }
+thiserror       = { workspace = true }
+miette          = { version = "7", features = ["fancy"] }
+
+[dev-dependencies]
+tokio           = { workspace = true }
+proptest        = { workspace = true }
+trace-lang-runtime = { path = "../runtime", features = ["test-support"] }
+
+[features]
+test-support = []

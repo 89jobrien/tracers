@@ -1,7 +1,7 @@
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tracers_agent::Agent;
+use trace_lang_agent::Agent;
 
 /// A runtime lookup table from agent name to a live [`Agent`] instance.
 ///
@@ -13,9 +13,9 @@ use tracers_agent::Agent;
 /// shape as the agent that escalated to it.
 ///
 /// ```rust
-/// use tracers_runtime::AgentRegistry;
-/// use tracers_agent::{Agent, AgentContext};
-/// use tracers_core::Trace;
+/// use trace_lang_runtime::AgentRegistry;
+/// use trace_lang_agent::{Agent, AgentContext};
+/// use trace_lang_core::Trace;
 /// use async_trait::async_trait;
 /// use std::sync::Arc;
 ///
@@ -95,8 +95,8 @@ where
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use tracers_agent::AgentContext;
-    use tracers_core::Trace;
+    use trace_lang_agent::AgentContext;
+    use trace_lang_core::Trace;
 
     struct Echo(&'static str);
 

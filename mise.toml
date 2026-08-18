@@ -1,0 +1,67 @@
+# Tool provisioning + composite workflows for trace-lang.
+# Thin 1:1 wrappers around `taskit <cmd>` live in taskit.toml/Cruxfile already —
+# this file only adds things mise itself is good for: pinning the exact CLI
+# tools taskit needs, and composing multi-step workflows taskit doesn't
+# bundle as a single command.
+
+[tools]
+rust = "stable"
+"cargo:cargo-nextest" = "latest"
+"cargo:cargo-llvm-cov" = "latest"
+"cargo:cargo-deny" = "latest"
+"cargo:cargo-machete" = "latest"
+"cargo:cargo-sweep" = "latest"
+"cargo:cargo-binstall" = "latest"
+"cargo:cargo-watch" = "latest"
+"cargo:taskit" = "latest"
+
+[env]
+CARGO_TERM_COLOR = "always"
+RUSTFLAGS = "-D warnings"
+
+# --- setup ---------------------------------------------------------------
+
+[tasks.bootstrap]
+description = "First-run setup: install pinned tools, then taskit's git hooks"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+mise install
+taskit install
+"""
+
+# --- dev loop (not covered by taskit at all) ------------------------------
+
+[tasks.watch]
+description = "Re-run check + affected tests on every save"
+run = "cargo watch -x check -x 'nextest run'"
+
+[tasks.docs]
+description = "Build and open rustdoc for the whole workspace"
+run = "cargo doc --workspace --no-deps --open"
+
+# --- composite workflows (mise chains taskit calls taskit can't chain itself) ---
+
+[tasks.coverage-all]
+description = "Coverage for every workspace crate, one run each, fails on first crate under threshold"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+for pkg in trace-lang-core trace-lang-task trace-lang-agent trace-lang-runtime; do
+  echo "=== coverage: $pkg ==="
+  taskit coverage --crate-name "$pkg"
+done
+"""
+
+[tasks.release-check]
+description = "Everything to verify before `taskit flow promote` toward release: version, inspect, drift, audit, full coverage sweep"
+depends = ["coverage-all"]
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+taskit version
+taskit inspect
+taskit check-protocol-drift
+taskit audit
+taskit flow status
+"""

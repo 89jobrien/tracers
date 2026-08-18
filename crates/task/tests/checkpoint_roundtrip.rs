@@ -3,8 +3,8 @@
 //! restored from the same file resumes exactly where the original left
 //! off, with dependency-gated readiness intact.
 
-use tracers_core::TraceRef;
-use tracers_task::{FileCheckpointStore, Priority, Task, TaskRegistry};
+use trace_lang_core::TraceRef;
+use trace_lang_task::{FileCheckpointStore, Priority, Task, TaskRegistry};
 use uuid::Uuid;
 
 fn temp_checkpoint_path() -> std::path::PathBuf {

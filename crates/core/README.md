@@ -1,24 +1,24 @@
-# tracers-core
+# trace-lang-core
 
 Core `Trace<T>` type — reasoning provenance as a first-class value.
 
 Every computation in a `trace::` program returns `Trace<T>` rather than a bare `T`.
 The trace carries the full causal chain: steps taken, branches rejected, confidence
-at each decision point, and RAII-style span timing. `tracers-core` has no dependency
-on any other crate in this workspace — everything else (`tracers-task`,
-`tracers-agent`, `tracers-runtime`) is built on top of it.
+at each decision point, and RAII-style span timing. `trace-lang-core` has no dependency
+on any other crate in this workspace — everything else (`trace-lang-task`,
+`trace-lang-agent`, `trace-lang-runtime`) is built on top of it.
 
 ## Install
 
 ```toml
 [dependencies]
-tracers-core = { path = "../core" }  # or a version once published
+trace-lang-core = { path = "../core" }  # or a version once published
 ```
 
 ## Quick start
 
 ```rust
-use tracers_core::{Trace, Step, TraceErr};
+use trace_lang_core::{Trace, Step, TraceErr};
 
 let mut t = Trace::new("hello world");
 t.push_step(Step::named("greet").with_confidence(0.97));
@@ -63,7 +63,7 @@ timestamp, an `outcome` (`Taken` / `Rejected { reason }` / `Failed { message }`)
 and any `Branch`es considered during that step (populated by `speculate`).
 
 ```rust
-use tracers_core::Step;
+use trace_lang_core::Step;
 use std::time::Duration;
 
 let step = Step::named("search")
@@ -106,7 +106,7 @@ RAII-style timing helper. Timing begins on `Span::start(name)` and is captured o
 > themselves.
 
 ```rust
-use tracers_core::Span;
+use trace_lang_core::Span;
 
 let span = Span::start("search");
 // ... do work ...
@@ -116,7 +116,7 @@ let duration = span.finish();
 ## Serialization
 
 Every public type derives `Serialize + Deserialize` — this is a compile-time
-constraint, not a convention, since `tracers-task` checkpoints traces alongside
+constraint, not a convention, since `trace-lang-task` checkpoints traces alongside
 `TaskRegistry`.
 
 ## Testing
@@ -126,5 +126,5 @@ Unit tests live alongside each module (`#[cfg(test)] mod tests`). `Step` and
 verifying `with_confidence` always lands in `[0.0, 1.0]` regardless of input.
 
 ```bash
-cargo test -p tracers-core
+cargo test -p trace-lang-core
 ```

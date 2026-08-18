@@ -10,9 +10,16 @@ env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -D warnings
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 jobs:
   ci:
     name: CI Pipeline
+    # TODO: add a cross-platform matrix (macos-latest, windows-latest) —
+    # currently ubuntu-only, no signal on other platforms.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,4 +36,16 @@ jobs:
         run: cargo install taskit || cargo install --path .
 
       - name: Run CI pipeline
+        id: taskit_ci
+        continue-on-error: true
         run: taskit ci --fail-fast
+
+      - name: Upload SARIF to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: target/taskit/taskit-results.sarif
+
+      - name: Fail job if CI pipeline failed
+        if: steps.taskit_ci.outcome == 'failure'
+        run: exit 1

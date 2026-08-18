@@ -1,9 +1,9 @@
-# tracers-runtime
+# trace-lang-runtime
 
 Agent registry, delegation resolution, parallel fan-out, and speculative
 branching for `trace::` pipelines.
 
-`tracers-agent` defines *what* an agent should do when it needs to escalate
+`trace-lang-agent` defines *what* an agent should do when it needs to escalate
 (`EscalationAction::Delegate("SeniorCoder")`), but resolving a name into a live
 agent and actually running it is a runtime concern — that's what this crate
 adds: `AgentRegistry` (name → agent lookup), `run_with_escalation` (auto-resolve
@@ -15,7 +15,7 @@ confident).
 
 ```toml
 [dependencies]
-tracers-runtime = { path = "../runtime" }
+trace-lang-runtime = { path = "../runtime" }
 ```
 
 ## `AgentRegistry<I, O>`
@@ -26,9 +26,9 @@ contract, since a delegation target (a reviewer, a fallback, a specialist)
 needs to accept the same task shape as the agent that escalated to it.
 
 ```rust
-use tracers_runtime::AgentRegistry;
-use tracers_agent::{Agent, AgentContext};
-use tracers_core::Trace;
+use trace_lang_runtime::AgentRegistry;
+use trace_lang_agent::{Agent, AgentContext};
+use trace_lang_core::Trace;
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -82,8 +82,8 @@ re-runs the *same* task against a new agent (retry the original task with a
 different agent, not continue from partial output).
 
 ```rust
-use tracers_agent::{Agent, AgentContext, EscalationAction};
-use tracers_core::Trace;
+use trace_lang_agent::{Agent, AgentContext, EscalationAction};
+use trace_lang_core::Trace;
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -96,7 +96,7 @@ impl Agent for Junior {
     fn goal(&self) -> &str { "attempt the task, escalate on failure" }
     async fn run(&self, _input: u32, ctx: &mut AgentContext) -> Trace<u32> {
         ctx.record_step().unwrap();
-        Trace::failed(tracers_core::TraceErr::other("out of my depth"))
+        Trace::failed(trace_lang_core::TraceErr::other("out of my depth"))
     }
     fn on_step_failure(&self) -> EscalationAction {
         EscalationAction::Delegate("Senior".to_string())
@@ -204,5 +204,5 @@ see this repo's root `CLAUDE.md` ("deferred") and `.ctx/HANDOFF.md`.
 ## Testing
 
 ```bash
-cargo test -p tracers-runtime
+cargo test -p trace-lang-runtime
 ```

@@ -16,12 +16,12 @@ implementation of its core types, all of which compile and are usable today.
 
 | crate              | description                                                     | docs |
 | ------------------ | ---------------------------------------------------------------- | --- |
-| `tracers-core`     | `Trace<T>`, `Step`, `Span`, `Branch`, `TraceErr`                | [README](crates/core/README.md) |
-| `tracers-task`     | `Task`, `TaskStatus`, `Priority`, `TaskRegistry`                | [README](crates/task/README.md) |
-| `tracers-agent`    | `Agent` trait, `spawn`/`delegate`, lifecycle escalation hooks   | [README](crates/agent/README.md) |
-| `tracers-runtime`  | `AgentRegistry`, `run_with_escalation`, `join_all`, `speculate` | [README](crates/runtime/README.md) |
+| `trace-lang-core`     | `Trace<T>`, `Step`, `Span`, `Branch`, `TraceErr`                | [README](crates/core/README.md) |
+| `trace-lang-task`     | `Task`, `TaskStatus`, `Priority`, `TaskRegistry`                | [README](crates/task/README.md) |
+| `trace-lang-agent`    | `Agent` trait, `spawn`/`delegate`, lifecycle escalation hooks   | [README](crates/agent/README.md) |
+| `trace-lang-runtime`  | `AgentRegistry`, `run_with_escalation`, `join_all`, `speculate` | [README](crates/runtime/README.md) |
 
-`tracers-core` has no dependency on any other crate in the workspace; the
+`trace-lang-core` has no dependency on any other crate in the workspace; the
 dependency graph flows `core -> task`, `core -> agent -> runtime`.
 
 ---
@@ -57,7 +57,7 @@ carries a `TraceRef` — a stable pointer back to the execution trace that
 produced the result. No output is ever detached from its provenance.
 
 ```rust
-use tracers_task::{Task, TaskRegistry, Priority};
+use trace_lang_task::{Task, TaskRegistry, Priority};
 
 let mut registry = TaskRegistry::new();
 
@@ -74,7 +74,7 @@ let ready = registry.ready_tasks();
 The registry checkpoints after every task completion:
 
 ```rust
-use tracers_task::FileCheckpointStore;
+use trace_lang_task::FileCheckpointStore;
 
 let store = FileCheckpointStore::new("./checkpoint.trace.json");
 
@@ -123,15 +123,15 @@ Key differences from a Rust `fn`:
 | escalation rules | no      | yes (`on_*`)    |
 | reasoning log    | no      | always-on       |
 
-### `tracers-agent`
+### `trace-lang-agent`
 
 The `Agent` trait, `spawn`, and `delegate` are implemented today as a real
 (async-trait–backed) Rust API — not just language design:
 
 ```rust
 use async_trait::async_trait;
-use tracers_agent::{Agent, AgentContext, EscalationAction, spawn, delegate};
-use tracers_core::Trace;
+use trace_lang_agent::{Agent, AgentContext, EscalationAction, spawn, delegate};
+use trace_lang_core::Trace;
 
 struct Coder;
 
@@ -165,14 +165,14 @@ resolve to an `EscalationAction` the caller can act on. `delegate()` does the
 same but extends the caller's `delegation_chain`, so a multi-agent handoff is
 always reconstructable from `AgentContext::delegation_chain`.
 
-### `tracers-runtime`
+### `trace-lang-runtime`
 
 `EscalationAction::Delegate("SeniorCoder")` is just a name — resolving it
 into a live agent and actually running it is a runtime concern.
-`tracers-runtime` adds:
+`trace-lang-runtime` adds:
 
 ```rust
-use tracers_runtime::{AgentRegistry, run_with_escalation, join_all, speculate};
+use trace_lang_runtime::{AgentRegistry, run_with_escalation, join_all, speculate};
 use std::sync::Arc;
 
 // resolve escalations against a registry, hopping up to a limit
@@ -253,7 +253,7 @@ pattern as Rust trait objects.
 
 - `crux` — agentic Rust DSL with a typed `Crux<T>` trace value, budgets, and
   confidence-based delegation; closest sibling design to `Trace<T>`
-- `doob` — agent-first task CLI that `tracers-task` could back
+- `doob` — agent-first task CLI that `trace-lang-task` could back
 - `orca-strait` — parallel TDD sub-agent orchestrator that could consume
   `TaskRegistry`
 - LangGraph, CrewAI — graph-based agentic frameworks; `trace::` differs by
@@ -264,8 +264,8 @@ pattern as Rust trait objects.
 
 ## status
 
-Early design + reference implementation. All four crates — `tracers-core`,
-`tracers-task`, `tracers-agent`, and `tracers-runtime` — compile
+Early design + reference implementation. All four crates — `trace-lang-core`,
+`trace-lang-task`, `trace-lang-agent`, and `trace-lang-runtime` — compile
 (`cargo check --workspace`) and are usable as Rust libraries today. The
 `trace::` surface syntax and compiler shown above (`agent Planner { .. }`,
 `branch { .. }`, `speculate { .. }`) are design artifacts, not yet

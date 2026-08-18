@@ -1,11 +1,11 @@
-# tracers-agent
+# trace-lang-agent
 
 The `Agent` trait, `spawn`/`delegate`, and lifecycle escalation hooks for
 `trace::` pipelines.
 
 An `Agent` is the unit of computation in `trace::` — it declares a goal, an
 optional step budget, and an optional confidence threshold, then implements
-`run()` to produce a `Trace<Output>` (from `tracers-core`). `spawn()` launches
+`run()` to produce a `Trace<Output>` (from `trace-lang-core`). `spawn()` launches
 an agent and evaluates its lifecycle hooks against the resulting trace: budget
 exhaustion, step failure, and low confidence each have a declarative escalation
 path rather than being handled ad hoc at the call site. `delegate()` transfers
@@ -15,7 +15,7 @@ execution to another agent while preserving the delegation chain.
 
 ```toml
 [dependencies]
-tracers-agent = { path = "../agent" }
+trace-lang-agent = { path = "../agent" }
 async-trait   = "0.1"
 ```
 
@@ -23,8 +23,8 @@ async-trait   = "0.1"
 
 ```rust
 use async_trait::async_trait;
-use tracers_agent::{Agent, AgentContext, spawn};
-use tracers_core::{Trace, Step};
+use trace_lang_agent::{Agent, AgentContext, spawn};
+use trace_lang_core::{Trace, Step};
 
 struct Greeter;
 
@@ -76,7 +76,7 @@ Lifecycle hooks are declarative: they return an `EscalationAction` describing
 *what should happen*, not perform it themselves. `spawn`/`delegate` evaluate the
 resulting trace against these hooks after `run()` completes; resolving the action
 (e.g. actually invoking the named delegate) is the caller's — typically
-`tracers-runtime`'s — job.
+`trace-lang-runtime`'s — job.
 
 Implementations must call `AgentContext::record_step()` for every unit of work so
 budget enforcement stays accurate.
@@ -123,7 +123,7 @@ pub async fn delegate<A: Agent + ?Sized>(
 
 Both accept `A: ?Sized`, so they work with `&dyn Agent<Input = I, Output = O>`
 trait objects as well as concrete sized agent types — this is what lets
-`tracers-runtime`'s `AgentRegistry` call them without duplicating logic between
+`trace-lang-runtime`'s `AgentRegistry` call them without duplicating logic between
 the sized and trait-object paths.
 
 `SpawnOutcome<O>` bundles the produced `Trace<O>`, the `AgentContext` it ran
@@ -143,13 +143,13 @@ Hook evaluation logic (shared between `spawn` and `delegate`): a
 consults `on_low_confidence`; otherwise `EscalationAction::None`.
 
 `spawn` and `delegate` do not act on the returned escalation — delegation is not
-performed automatically. `tracers-runtime::run_with_escalation` is the layer that
+performed automatically. `trace-lang-runtime::run_with_escalation` is the layer that
 resolves `Delegate(name)` against a live agent registry and re-runs.
 
 ## Testing
 
 ```bash
-cargo test -p tracers-agent
+cargo test -p trace-lang-agent
 ```
 
 `AgentContext` budget tracking is covered by `proptest` property tests and a

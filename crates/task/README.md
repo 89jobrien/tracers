@@ -1,11 +1,11 @@
-# tracers-task
+# trace-lang-task
 
 Serializable task management for `trace::` agentic pipelines.
 
 Tasks in `trace::` are not strings or loose IDs. They are structured, versioned
 values with identity, status, priority, and dependency edges baked in. Every
 `TaskStatus::Done` carries a `TraceRef` — a stable pointer to the execution trace
-that produced it, from `tracers-core`. The `TaskRegistry` is the runtime task
+that produced it, from `trace-lang-core`. The `TaskRegistry` is the runtime task
 graph: it tracks ready tasks (all dependencies satisfied), checkpoints itself
 after every completion, and can restore from disk to resume a crashed pipeline.
 
@@ -13,13 +13,13 @@ after every completion, and can restore from disk to resume a crashed pipeline.
 
 ```toml
 [dependencies]
-tracers-task = { path = "../task" }
+trace-lang-task = { path = "../task" }
 ```
 
 ## Quick start
 
 ```rust
-use tracers_task::{Task, TaskRegistry, Priority};
+use trace_lang_task::{Task, TaskRegistry, Priority};
 
 let mut registry = TaskRegistry::new();
 
@@ -69,7 +69,7 @@ enum TaskStatus {
 }
 ```
 
-`Done` and `Failed` both carry a `TraceRef` from `tracers-core` — no terminal state
+`Done` and `Failed` both carry a `TraceRef` from `trace-lang-core` — no terminal state
 is ever detached from the execution that produced it.
 
 ### `Priority`
@@ -106,7 +106,7 @@ A task with an empty `depends_on` is vacuously ready as soon as it's `Pending`.
 The registry checkpoints after every task completion:
 
 ```rust
-use tracers_task::FileCheckpointStore;
+use trace_lang_task::FileCheckpointStore;
 
 let store = FileCheckpointStore::new("./checkpoint.trace.json");
 
@@ -136,8 +136,8 @@ return `Err` (not an empty `Ok` or a panic) if nothing has been saved yet.
 For example, an in-memory store for tests:
 
 ```rust
-use tracers_task::CheckpointStore;
-use tracers_core::TraceErr;
+use trace_lang_task::CheckpointStore;
+use trace_lang_core::TraceErr;
 use std::sync::Mutex;
 
 struct MemoryCheckpointStore {
@@ -167,11 +167,11 @@ your own adapter:
 
 ```toml
 [dev-dependencies]
-tracers-task = { path = "../task", features = ["test-support"] }
+trace-lang-task = { path = "../task", features = ["test-support"] }
 ```
 
 ```rust
-use tracers_task::checkpoint::conformance::assert_checkpoint_store_contract;
+use trace_lang_task::checkpoint::conformance::assert_checkpoint_store_contract;
 
 #[test]
 fn my_store_conforms() {
@@ -183,8 +183,8 @@ fn my_store_conforms() {
 ## Testing
 
 ```bash
-cargo test -p tracers-task
-cargo test -p tracers-task --features test-support
+cargo test -p trace-lang-task
+cargo test -p trace-lang-task --features test-support
 ```
 
 Includes `proptest` coverage for confidence clamping, round-tripping tasks through

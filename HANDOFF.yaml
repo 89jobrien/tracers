@@ -1,0 +1,33 @@
+project: tracers
+updated: 2026-08-16
+notes: >
+  Completed trace-test crate and initial release v0.1.0. Built end-to-end test
+  framework with TraceOutcome port, assertion primitives, assert_trace! macro,
+  property tests, and integration tests against escalation chain. Runtime
+  self-dependency version needs resolution before next publish.
+
+items:
+  - id: 1
+    title: "Resolve runtime self-dependency version constraint before first publish"
+    description: >
+      trace-lang-runtime depends on itself for testing but has no explicit
+      version constraint. This needs to be formalized in Cargo.toml with
+      a proper version specification before publishing to crates.io.
+    priority: P1
+    status: open
+    files:
+      - /Users/joe/dev/tracers/crates/runtime/Cargo.toml
+
+log:
+  - date: 2026-08-16
+    summary: >
+      Built trace-test crate end-to-end: scaffolded and registered in workspace,
+      implemented TraceOutcome port over SpawnOutcome/RunOutcome, four assertion
+      primitives (contains_step, never_step, escalates_to, confidence_below) with
+      TraceAssertionError, assert_trace! macro, property test for confidence_below
+      (100 cases), and integration test against real escalation chain fixture.
+      Also refactored runtime: moved escalation_wiring fixtures into src/fixtures.rs,
+      added test-support feature, made async-trait optional. Passed cargo check and
+      all 64 unit+integration tests (trace-test 15 tests: outcome contract, assertion
+      primitives, macro behavior). Cut release v0.1.0. Flagged: runtime self-dependency
+      version needs explicit constraint before crates.io publish.
