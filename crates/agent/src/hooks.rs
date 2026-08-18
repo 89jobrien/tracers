@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use trace_lang_core::TraceErr;
 
 /// The declarative outcome of a lifecycle hook
@@ -7,7 +8,7 @@ use trace_lang_core::TraceErr;
 /// the caller (typically `spawn`, or an orchestrating agent) is
 /// responsible for actually carrying it out — e.g. calling `delegate()`
 /// with the named agent.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum EscalationAction {
     /// No escalation — proceed as normal.
     None,
@@ -19,10 +20,12 @@ pub enum EscalationAction {
 }
 
 impl EscalationAction {
+    /// True if this action is `None` — no escalation recommended.
     pub fn is_none(&self) -> bool {
         matches!(self, EscalationAction::None)
     }
 
+    /// The delegation target's name, if this action is `Delegate`.
     pub fn delegate_target(&self) -> Option<&str> {
         match self {
             EscalationAction::Delegate(name) => Some(name),
