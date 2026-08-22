@@ -15,7 +15,7 @@
     {
       "name": "trace-lang-core-trace",
       "path": "crates/core/src/trace.rs",
-      "hash": "ca1fef59f9d7e63248aa51c659cf819e46322d402653d666c3e716d966a0dfe1"
+      "hash": "2ef507a04f1685d9c941ed5526a91d1628f9408f4116253d8464d22a5de4320e"
     },
     {
       "name": "trace-lang-task-checkpoint",
@@ -25,7 +25,7 @@
     {
       "name": "trace-lang-task-registry",
       "path": "crates/task/src/registry.rs",
-      "hash": "79d5d502d81e3e001210d0e38863d0975ca1c56473822fb4105e218c34b1361e"
+      "hash": "61af09c73de6a023545abaec80772c0c8b5bc6958e30311d93f51da831f4dfe9"
     }
   ]
 }

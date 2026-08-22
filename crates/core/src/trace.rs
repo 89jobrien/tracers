@@ -122,11 +122,7 @@ impl<T: Clone + Serialize> Trace<T> {
     /// Steps sorted slowest-first — useful for identifying bottlenecks.
     pub fn bottlenecks(&self) -> Vec<&Step> {
         let mut steps: Vec<&Step> = self.steps.iter().collect();
-        steps.sort_by(|a, b| {
-            b.duration
-                .unwrap_or_default()
-                .cmp(&a.duration.unwrap_or_default())
-        });
+        steps.sort_by_key(|s| std::cmp::Reverse(s.duration.unwrap_or_default()));
         steps
     }
 
