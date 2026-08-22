@@ -21,9 +21,14 @@ ignore = true
 [bans]
 multiple-versions = "warn"
 wildcards = "allow"
-# TODO: add a [[bans.skip]] entry for `unicode-width` — miette pulls 0.1.14
-# directly while its own dep textwrap pulls 0.2.2, producing a benign but
-# persistent duplicate-version warning on every `taskit audit`.
+
+# miette pulls unicode-width 0.1.14 directly while its own dependency
+# textwrap pulls 0.2.2. Both are in the tree, neither is ours to unify, and
+# the duplicate is benign — skipping it keeps `taskit audit` output signal
+# rather than a warning everyone learns to ignore. Revisit when miette
+# updates its direct dependency.
+[[bans.skip]]
+crate = "unicode-width"
 
 [sources]
 unknown-registry = "warn"

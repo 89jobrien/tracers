@@ -1,5 +1,9 @@
 # trace-lang-runtime
 
+[![crates.io](https://img.shields.io/crates/v/trace-lang-runtime.svg)](https://crates.io/crates/trace-lang-runtime)
+[![docs.rs](https://docs.rs/trace-lang-runtime/badge.svg)](https://docs.rs/trace-lang-runtime)
+[![MSRV](https://img.shields.io/badge/MSRV-1.88-blue.svg)](https://github.com/89jobrien/trace-lang)
+
 Agent registry, delegation resolution, parallel fan-out, and speculative
 branching for `trace::` pipelines.
 

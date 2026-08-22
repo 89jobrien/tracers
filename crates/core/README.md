@@ -1,5 +1,9 @@
 # trace-lang-core
 
+[![crates.io](https://img.shields.io/crates/v/trace-lang-core.svg)](https://crates.io/crates/trace-lang-core)
+[![docs.rs](https://docs.rs/trace-lang-core/badge.svg)](https://docs.rs/trace-lang-core)
+[![MSRV](https://img.shields.io/badge/MSRV-1.88-blue.svg)](https://github.com/89jobrien/trace-lang)
+
 Core `Trace<T>` type — reasoning provenance as a first-class value.
 
 Every computation in a `trace::` program returns `Trace<T>` rather than a bare `T`.

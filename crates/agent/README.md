@@ -1,5 +1,9 @@
 # trace-lang-agent
 
+[![crates.io](https://img.shields.io/crates/v/trace-lang-agent.svg)](https://crates.io/crates/trace-lang-agent)
+[![docs.rs](https://docs.rs/trace-lang-agent/badge.svg)](https://docs.rs/trace-lang-agent)
+[![MSRV](https://img.shields.io/badge/MSRV-1.88-blue.svg)](https://github.com/89jobrien/trace-lang)
+
 The `Agent` trait, `spawn`/`delegate`, and lifecycle escalation hooks for
 `trace::` pipelines.
 

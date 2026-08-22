@@ -1,5 +1,9 @@
 # trace-lang-task
 
+[![crates.io](https://img.shields.io/crates/v/trace-lang-task.svg)](https://crates.io/crates/trace-lang-task)
+[![docs.rs](https://docs.rs/trace-lang-task/badge.svg)](https://docs.rs/trace-lang-task)
+[![MSRV](https://img.shields.io/badge/MSRV-1.88-blue.svg)](https://github.com/89jobrien/trace-lang)
+
 Serializable task management for `trace::` agentic pipelines.
 
 Tasks in `trace::` are not strings or loose IDs. They are structured, versioned

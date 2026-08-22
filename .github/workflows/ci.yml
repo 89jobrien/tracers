@@ -18,8 +18,9 @@ permissions:
 jobs:
   ci:
     name: CI Pipeline
-    # TODO: add a cross-platform matrix (macos-latest, windows-latest) —
-    # currently ubuntu-only, no signal on other platforms.
+    # Ubuntu-only on purpose: this job runs the full taskit pipeline and
+    # uploads SARIF, neither of which gains anything from being run three
+    # times. Cross-platform signal comes from the `cross-platform` job below.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,6 +32,12 @@ jobs:
       - uses: taiki-e/install-action@nextest
 
       - uses: Swatinem/rust-cache@v2
+
+      # `taskit` depends on a crate that generates code from .proto files.
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install taskit
         run: cargo install taskit || cargo install --path .
@@ -49,3 +56,59 @@ jobs:
       - name: Fail job if CI pipeline failed
         if: steps.taskit_ci.outcome == 'failure'
         run: exit 1
+
+  cross-platform:
+    name: Test (${{ matrix.os }})
+    # Checkpoints are files and the CLI resolves paths, so "works on Linux"
+    # is not the same claim as "works". This runs the plain cargo pipeline —
+    # no taskit, no SARIF — on the other two platforms as well.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.os }}
+
+      # No `--locked`: Cargo.lock is gitignored in this repo, so there is
+      # nothing to pin against.
+      - name: Test
+        run: cargo test --workspace --all-targets
+
+      - name: Doc tests
+        run: cargo test --workspace --doc
+
+  msrv:
+    name: MSRV
+    # Reads the floor out of the workspace manifest rather than repeating it,
+    # so bumping `rust-version` is a one-line change that CI follows.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read rust-version from Cargo.toml
+        id: msrv
+        run: |
+          version="$(grep -m1 '^rust-version' Cargo.toml | cut -d'"' -f2)"
+          test -n "$version" || { echo "no rust-version in Cargo.toml"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "MSRV is $version"
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.msrv.outputs.version }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: msrv-${{ steps.msrv.outputs.version }}
+
+      # `--all-targets` matters: benches and examples are the parts most
+      # likely to reach for something newer than the floor.
+      - name: Check at the declared MSRV
+        run: cargo check --workspace --all-targets

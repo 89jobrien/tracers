@@ -10,12 +10,12 @@
     {
       "name": "trace-lang-core-error",
       "path": "crates/core/src/error.rs",
-      "hash": "6b0fde3197eea3089ba7492352dba534b1b48c6566a09f9f28eb7226f11c83f9"
+      "hash": "00bb81584a6e935ffb8f937351851df0da429154bc0f0bb98e747e90a0e22aaa"
     },
     {
       "name": "trace-lang-core-trace",
       "path": "crates/core/src/trace.rs",
-      "hash": "ca1fef59f9d7e63248aa51c659cf819e46322d402653d666c3e716d966a0dfe1"
+      "hash": "e9974ca9ed4d3f1386a3952d08426c507e1431bc38289e04233fa24f5cec134b"
     },
     {
       "name": "trace-lang-task-checkpoint",
@@ -25,7 +25,17 @@
     {
       "name": "trace-lang-task-registry",
       "path": "crates/task/src/registry.rs",
-      "hash": "79d5d502d81e3e001210d0e38863d0975ca1c56473822fb4105e218c34b1361e"
+      "hash": "31fb3fbc004672e70945f30ce55752ec1518bd39fe959fd168de29b3ef3273dc"
+    },
+    {
+      "name": "trace-lang-agent-context",
+      "path": "crates/agent/src/context.rs",
+      "hash": "3538be1f6ec4a86becad3c1246023fbeb61eeb2048d1276b88d81d9c1f9510a0"
+    },
+    {
+      "name": "trace-lang-runtime-speculate",
+      "path": "crates/runtime/src/speculate.rs",
+      "hash": "51e68253a1b27c9161b64b2a08748dcf2bc75528d6c7f9ec62ba68aa455a7792"
     }
   ]
 }

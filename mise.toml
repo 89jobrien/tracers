@@ -13,6 +13,8 @@ rust = "stable"
 "cargo:cargo-sweep" = "latest"
 "cargo:cargo-binstall" = "latest"
 "cargo:cargo-watch" = "latest"
+"cargo:cargo-fuzz" = "latest"   # fuzz/ targets; also needs a nightly toolchain
+"cargo:git-cliff" = "latest"    # regenerates CHANGELOG.md from conventional commits
 "cargo:taskit" = "latest"
 
 [env]
@@ -53,9 +55,29 @@ for pkg in trace-lang-core trace-lang-task trace-lang-agent trace-lang-runtime; 
 done
 """
 
+[tasks.changelog]
+description = "Regenerate CHANGELOG.md from conventional commits (taskit has no changelog hook)"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+git-cliff --output CHANGELOG.md
+echo "CHANGELOG.md regenerated — review the diff before committing"
+"""
+
+[tasks.fuzz]
+description = "Run every fuzz target for a minute each (requires nightly + cargo-fuzz)"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+for target in trace_roundtrip checkpoint_parse; do
+  echo "=== fuzz: $target ==="
+  cargo +nightly fuzz run "$target" -- -max_total_time=60
+done
+"""
+
 [tasks.release-check]
-description = "Everything to verify before `taskit flow promote` toward release: version, inspect, drift, audit, full coverage sweep"
-depends = ["coverage-all"]
+description = "Everything to verify before `taskit flow promote` toward release: version, inspect, drift, audit, changelog, full coverage sweep"
+depends = ["coverage-all", "changelog"]
 run = """
 #!/usr/bin/env bash
 set -euo pipefail

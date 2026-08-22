@@ -58,10 +58,18 @@ path = "crates/task/src/checkpoint/mod.rs"
 name = "trace-lang-task-registry"
 path = "crates/task/src/registry.rs"
 
-# TODO: add surfaces for crates/agent/src/context.rs (budget enforcement) and
-# crates/runtime/src/speculate.rs (the tie-breaking fold CLAUDE.md calls out
-# as a past bug source, caught only by a unit test) — both are load-bearing
-# invariants not currently tracked for drift.
+# Budget enforcement: `record_step` is the only thing standing between a
+# runaway agent and an unbounded bill.
+[[protocol.surfaces]]
+name = "trace-lang-agent-context"
+path = "crates/agent/src/context.rs"
+
+# Winner selection: CLAUDE.md records that `Iterator::max_by` silently broke
+# "first candidate wins ties" here once already, and only a unit test caught
+# it. Tracking the file means the next edit to it is at least noticed.
+[[protocol.surfaces]]
+name = "trace-lang-runtime-speculate"
+path = "crates/runtime/src/speculate.rs"
 
 # Coverage enforcement: run `taskit coverage --crate-name <pkg>` to check.
 # taskit's [coverage] block only supports one crate at a time, so this stays
@@ -111,19 +119,38 @@ name = "check-protocol-drift"
 cmd = "check-protocol-drift"
 gate = true
 
-# TODO: add "bench" and "fuzz" steps once benches/ and fuzz/ exist — both
-# `taskit bench` and `taskit fuzz` are already available subcommands, just
-# unused; see the matching TODOs in crates/core/src/lib.rs.
+# Non-gating on purpose. A benchmark has no pass/fail without a stored
+# baseline, and both fuzz targets need nightly plus cargo-fuzz, which not
+# every environment running `taskit ci` will have. They earn their place by
+# reporting — a target that stops building is a real regression, and 60
+# seconds each is enough to catch that.
+[[ci.steps]]
+name = "bench"
+cmd = "bench --crate-name trace-lang-core"
+gate = false
+
+[[ci.steps]]
+name = "fuzz (trace_roundtrip)"
+cmd = "fuzz trace_roundtrip --duration 60"
+gate = false
+
+[[ci.steps]]
+name = "fuzz (checkpoint_parse)"
+cmd = "fuzz checkpoint_parse --duration 60"
+gate = false
 
 # Metric thresholds for `taskit inspect`. CLI flags override these.
-# max_todo_fixme raised from 0: a gm-ideate pass seeded TODO markers for
-# every open backlog idea (tracked, not drift) — revisit downward as each
-# one is resolved.
+# max_todo_fixme was 20 while a gm-ideate pass had seeded a TODO marker for
+# every open backlog idea. Those are now implemented; what remains are the
+# two items CLAUDE.md lists as explicitly deferred (thread-parallel
+# join_all/speculate, and a shared step budget), which account for every
+# marker left. Lower this again as those close — do not raise it to make a
+# new marker fit.
 [inspect]
 max_clippy_warnings = 0
 max_clippy_errors   = 0
 max_test_failures   = 0
-max_todo_fixme      = 20
+max_todo_fixme      = 5
 
 # Default retention policy for `taskit clean`. CLI --older-than overrides.
 [clean]
@@ -142,8 +169,11 @@ release = "release"
 push = true
 
 [release]
-# TODO: add CHANGELOG.md, updated as part of `taskit patch`/`minor`/`major` —
-# nothing currently captures what changed between version bumps.
+# CHANGELOG.md is generated from conventional commits by git-cliff (see
+# cliff.toml). taskit has no changelog hook of its own, so the regeneration
+# lives where this repo puts everything taskit cannot chain: `mise run
+# changelog`, which `mise run release-check` depends on. Run a version bump
+# as `taskit patch && mise run changelog`.
 # github_repo = "owner/repo"  # auto-detected from git remote
 publish_order = [
   "trace-lang-core",

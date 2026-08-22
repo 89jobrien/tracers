@@ -1,5 +1,9 @@
 # trace-cli
 
+[![crates.io](https://img.shields.io/crates/v/trace-cli.svg)](https://crates.io/crates/trace-cli)
+[![docs.rs](https://docs.rs/trace-cli/badge.svg)](https://docs.rs/trace-cli)
+[![MSRV](https://img.shields.io/badge/MSRV-1.88-blue.svg)](https://github.com/89jobrien/trace-lang)
+
 Inspect `trace::` checkpoint files from the command line. Installs a single
 binary, `trace`.
 

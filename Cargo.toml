@@ -15,10 +15,12 @@ members = [
 exclude = ["fuzz"]
 
 [workspace.package]
-# TODO: pin `rust-version` (MSRV) here and add a `taskit inspect`/CI check
-# for it — edition 2024 code has a real toolchain floor and nothing
-# currently enforces it.
 edition     = "2024"
+# Verified floor, not a guess: 1.87 rejects the let-chains in
+# crates/agent/src/context.rs, and criterion 0.8 (a dev-dependency of the
+# core benches) needs 1.86. Enforced by the `msrv` job in
+# .github/workflows/ci.yml, which reads this exact line.
+rust-version = "1.88"
 # NOTE: single space around `=` is load-bearing — taskit's version bump
 # (taskit-engine/src/patch.rs) matches the literal prefix `version = "`.
 version = "0.2.1"
@@ -28,9 +30,6 @@ repository  = "https://github.com/89jobrien/trace-lang"
 homepage    = "https://github.com/89jobrien/trace-lang"
 keywords    = ["agentic", "tracing", "task-management", "observability"]
 categories  = ["development-tools", "asynchronous"]
-
-# TODO: add `[package.metadata.docs.rs]` + docs.rs badges per crate README —
-# none of the four publishable crates have either right now.
 
 [workspace.dependencies]
 serde       = { version = "1.0.210", features = ["derive"] }

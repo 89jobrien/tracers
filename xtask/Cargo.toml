@@ -1,6 +1,10 @@
 [package]
 name = "xtask"
-version = "0.1.0"
-# TODO: bump to edition = "2024" to match the rest of the workspace.
-edition = "2021"
+# Inherited rather than pinned: `taskit patch` only rewrites literal
+# `version = "<workspace version>"` strings, so a hardcoded 0.1.0 here drifts
+# on the first bump and `taskit inspect`'s version-consistency check fails
+# from then on. Nothing publishes xtask, so the number is free to follow the
+# workspace.
+version.workspace = true
+edition = "2024"
 publish = false

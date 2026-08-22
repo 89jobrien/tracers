@@ -9,6 +9,13 @@ repository.workspace = true
 homepage.workspace    = true
 keywords.workspace    = true
 categories.workspace  = true
+rust-version.workspace = true
+
+# docs.rs builds with every feature on, so items behind `test-support` (and
+# any future feature) appear in the published docs instead of silently
+# missing.
+[package.metadata.docs.rs]
+all-features = true
 
 [dependencies]
 serde      = { workspace = true }
