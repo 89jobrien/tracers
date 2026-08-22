@@ -6,6 +6,7 @@ crates = [
   { dir = "crates/agent", pkg = "trace-lang-agent" },
   { dir = "crates/runtime", pkg = "trace-lang-runtime" },
   { dir = "crates/trace-test", pkg = "trace-lang-test" },
+  { dir = "crates/cli", pkg = "trace-cli" },
 ]
 # offline_skip = "test(/.*network.*/)"
 
@@ -29,6 +30,10 @@ dependents = ["trace-lang-test"]
 [[workspace.propagation]]
 source = "trace-lang-runtime"
 dependents = ["trace-lang-test"]
+
+[[workspace.propagation]]
+source = "trace-lang-task"
+dependents = ["trace-cli"]
 
 [protocol]
 # lockfile = "taskit-protocol.lock"

@@ -1,0 +1,27 @@
+[package]
+name        = "trace-cli"
+description = "Inspect trace:: checkpoint files — list, show, chain, and diff task graphs"
+version.workspace    = true
+edition.workspace    = true
+authors.workspace    = true
+license.workspace    = true
+repository.workspace = true
+homepage.workspace    = true
+keywords.workspace    = true
+categories.workspace  = true
+
+[[bin]]
+name = "trace"
+path = "src/main.rs"
+
+[dependencies]
+trace-lang-core = { version = "0.2.1", path = "../core" }
+trace-lang-task = { version = "0.2.1", path = "../task" }
+clap        = { workspace = true }
+miette      = { version = "7", features = ["fancy"] }
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+uuid        = { workspace = true }
+
+[dev-dependencies]
+chrono = { workspace = true }

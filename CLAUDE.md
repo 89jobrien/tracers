@@ -17,7 +17,8 @@ crates/
   core/    — Trace<T>, Step, Span, Branch, TraceErr
   task/    — Task, TaskStatus, Priority, TaskRegistry
   agent/   — Agent trait, spawn/delegate, lifecycle escalation hooks
-  runtime/ — AgentRegistry, run_with_escalation, join_all, speculate
+  runtime/ — AgentRegistry, run_with_escalation, join_all, speculate, speculate_race
+  cli/     — `trace` binary: list/show/chain/diff over checkpoint files
 ```
 
 ## key design decisions
@@ -67,9 +68,7 @@ cargo doc --workspace --open     # browse docs
 
 ## planned crates
 
-| crate       | description                                       | status  |
-| ----------- | ------------------------------------------------- | ------- |
-| `trace-cli` | `doob`-style CLI for inspecting trace checkpoints | planned |
+None currently — `trace-cli` shipped; see the crate map above.
 
 ## deferred (explicitly out of scope for now)
 

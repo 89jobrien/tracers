@@ -19,7 +19,8 @@ implementation of its core types, all of which compile and are usable today.
 | `trace-lang-core`     | `Trace<T>`, `Step`, `Span`, `Branch`, `TraceErr`                | [README](crates/core/README.md) |
 | `trace-lang-task`     | `Task`, `TaskStatus`, `Priority`, `TaskRegistry`                | [README](crates/task/README.md) |
 | `trace-lang-agent`    | `Agent` trait, `spawn`/`delegate`, lifecycle escalation hooks   | [README](crates/agent/README.md) |
-| `trace-lang-runtime`  | `AgentRegistry`, `run_with_escalation`, `join_all`, `speculate` | [README](crates/runtime/README.md) |
+| `trace-lang-runtime`  | `AgentRegistry`, `run_with_escalation`, `join_all`, `speculate`, `speculate_race` | [README](crates/runtime/README.md) |
+| `trace-cli`           | `trace` — inspect checkpoints: `list`, `show`, `chain`, `diff`  | [README](crates/cli/README.md) |
 
 `trace-lang-core` has no dependency on any other crate in the workspace; the
 dependency graph flows `core -> task`, `core -> agent -> runtime`.
