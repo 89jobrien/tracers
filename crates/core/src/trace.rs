@@ -1,3 +1,4 @@
+use crate::cost::StepCost;
 use crate::error::TraceErr;
 use crate::step::{Branch, Step};
 use serde::{Deserialize, Serialize};
@@ -130,6 +131,37 @@ impl<T: Clone + Serialize> Trace<T> {
         steps
     }
 
+    /// Total cost across every step that recorded one.
+    ///
+    /// Token counts sum unconditionally; `dollars` is `Some` iff at least
+    /// one step recorded a dollar figure, and sums only those steps — a
+    /// partially-priced trace reports the spend it actually knows about
+    /// rather than silently reporting `None` or pretending unpriced steps
+    /// were free.
+    pub fn total_cost(&self) -> StepCost {
+        self.steps.iter().filter_map(|s| s.cost).sum()
+    }
+
+    /// Steps sorted priciest-first — the cost analogue of [`Self::bottlenecks`].
+    ///
+    /// Ordering is by recorded dollars descending, tie-broken by total
+    /// tokens descending, so the method behaves sensibly whether every step
+    /// carries a price (dollar ordering) or none do (pure token ordering).
+    /// Steps with no recorded cost sort last. The sort is stable, so steps
+    /// of equal cost keep their execution order.
+    pub fn priciest_steps(&self) -> Vec<&Step> {
+        let mut steps: Vec<&Step> = self.steps.iter().collect();
+        steps.sort_by(|a, b| {
+            let (a, b) = (a.cost.unwrap_or_default(), b.cost.unwrap_or_default());
+            b.dollars
+                .unwrap_or(0.0)
+                .partial_cmp(&a.dollars.unwrap_or(0.0))
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| b.total_tokens().cmp(&a.total_tokens()))
+        });
+        steps
+    }
+
     /// Steps whose confidence score is below `threshold` (default 0.7).
     pub fn low_confidence(&self) -> Vec<&Step> {
         self.low_confidence_below(0.7)
@@ -158,6 +190,7 @@ impl<T: Clone + Serialize> From<Trace<T>> for Result<T, TraceErr> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cost::StepCost;
     use crate::step::Step;
     use std::time::Duration;
 
@@ -229,6 +262,58 @@ mod tests {
         let sorted = t.bottlenecks();
         assert_eq!(sorted[0].name, "slow");
         assert_eq!(sorted[1].name, "fast");
+    }
+
+    #[test]
+    fn total_cost_sums_only_the_steps_that_recorded_one() {
+        let mut t = Trace::new(1);
+        t.push_step(Step::named("cheap").with_cost(StepCost::new(10, 5).with_dollars(0.01)));
+        t.push_step(Step::named("free"));
+        t.push_step(Step::named("pricey").with_cost(StepCost::new(100, 50).with_dollars(0.10)));
+
+        let total = t.total_cost();
+        assert_eq!(total.input_tokens, 110);
+        assert_eq!(total.output_tokens, 55);
+        assert_eq!(total.dollars.map(|d| (d * 100.0).round()), Some(11.0));
+    }
+
+    #[test]
+    fn total_cost_of_a_trace_with_no_recorded_costs_is_zero() {
+        let mut t = Trace::new(1);
+        t.push_step(Step::named("a"));
+        assert!(t.total_cost().is_zero());
+    }
+
+    #[test]
+    fn priciest_steps_sorts_by_dollars_then_tokens() {
+        let mut t = Trace::new(1);
+        t.push_step(Step::named("free"));
+        t.push_step(Step::named("cheap").with_cost(StepCost::new(1, 1).with_dollars(0.01)));
+        t.push_step(Step::named("pricey").with_cost(StepCost::new(1, 1).with_dollars(0.50)));
+
+        let names: Vec<&str> = t.priciest_steps().iter().map(|s| s.name.as_str()).collect();
+        assert_eq!(names, vec!["pricey", "cheap", "free"]);
+    }
+
+    #[test]
+    fn priciest_steps_falls_back_to_tokens_when_nothing_is_priced() {
+        let mut t = Trace::new(1);
+        t.push_step(Step::named("small").with_cost(StepCost::new(1, 1)));
+        t.push_step(Step::named("big").with_cost(StepCost::new(500, 500)));
+
+        let names: Vec<&str> = t.priciest_steps().iter().map(|s| s.name.as_str()).collect();
+        assert_eq!(names, vec!["big", "small"]);
+    }
+
+    #[test]
+    fn priciest_steps_keeps_execution_order_on_a_tie() {
+        // Mirrors `speculate`'s "first candidate wins ties" rule — the sort
+        // must be stable, not merely correct on distinct costs.
+        let mut t = Trace::new(1);
+        t.push_step(Step::named("first").with_cost(StepCost::new(10, 10).with_dollars(0.05)));
+        t.push_step(Step::named("second").with_cost(StepCost::new(10, 10).with_dollars(0.05)));
+
+        assert_eq!(t.priciest_steps()[0].name, "first");
     }
 
     #[test]

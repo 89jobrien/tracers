@@ -1,13 +1,8 @@
+use crate::cost::StepCost;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use uuid::Uuid;
-
-// TODO: add a step cost ledger (docs/ideas/FEATURES.md #3, flagged there as
-// "lowest-effort, highest-immediate-value") — `StepCost { input_tokens,
-// output_tokens, dollars: Option<f64> }`, a `Step::with_cost()` builder, and
-// `Trace::total_cost()`/`priciest_steps()` mirroring the existing
-// `bottlenecks()` pattern.
 
 /// A single unit of reasoning. Every `observe`, `branch`, and `emit` in a
 /// trace:: agent produces a `Step` that is appended to the `Trace<T>`.
@@ -26,6 +21,11 @@ pub struct Step {
     /// rest `Rejected`.
     pub branches: Vec<Branch>,
     pub notes: Option<String>,
+    /// What this step cost to produce, if the caller recorded it.
+    /// `#[serde(default)]` so checkpoints written before the cost ledger
+    /// existed still deserialize.
+    #[serde(default)]
+    pub cost: Option<StepCost>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -50,6 +50,7 @@ impl Step {
             outcome: StepOutcome::Taken,
             branches: Vec::new(),
             notes: None,
+            cost: None,
         }
     }
 
@@ -68,6 +69,15 @@ impl Step {
     /// Builder: attach a free-text note.
     pub fn with_note(mut self, note: impl Into<String>) -> Self {
         self.notes = Some(note.into());
+        self
+    }
+
+    /// Builder: record what this step cost — tokens consumed and, if the
+    /// caller knew the provider's price, dollars. Rolls up through
+    /// [`crate::Trace::total_cost`] and orders
+    /// [`crate::Trace::priciest_steps`].
+    pub fn with_cost(mut self, cost: StepCost) -> Self {
+        self.cost = Some(cost);
         self
     }
 
@@ -172,6 +182,32 @@ mod tests {
         let taken = Step::named("c");
         assert!(!taken.is_rejected());
         assert!(!taken.is_failed());
+    }
+
+    #[test]
+    fn with_cost_attaches_a_cost_and_defaults_to_none() {
+        assert_eq!(Step::named("a").cost, None);
+        let step = Step::named("a").with_cost(StepCost::new(10, 5));
+        assert_eq!(step.cost.unwrap().total_tokens(), 15);
+    }
+
+    #[test]
+    fn step_deserializes_from_a_checkpoint_written_before_the_cost_field() {
+        // Regression guard for the `#[serde(default)]` on `cost`: a step
+        // serialized by <= v0.2.1 has no `cost` key at all.
+        let legacy = serde_json::json!({
+            "id": uuid::Uuid::new_v4(),
+            "name": "legacy",
+            "confidence": null,
+            "duration": null,
+            "started_at": chrono::Utc::now(),
+            "outcome": "Taken",
+            "branches": [],
+            "notes": null,
+        });
+        let step: Step = serde_json::from_value(legacy).expect("legacy step deserializes");
+        assert_eq!(step.name, "legacy");
+        assert_eq!(step.cost, None);
     }
 
     #[test]
