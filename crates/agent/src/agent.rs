@@ -17,10 +17,11 @@ use trace_lang_core::Trace;
 /// themselves. `spawn()` evaluates the resulting trace against these
 /// hooks after `run()` completes.
 ///
-// TODO: add `contract!` step pre/post-conditions here (see
-// docs/ideas/FEATURES.md #6) — `Contract<I, O> { pre, post }` closures
-// whose violation produces `StepOutcome::Failed`, proposed to live
-// directly in this crate rather than a new one.
+/// Steps that must satisfy an invariant beyond "did not error" can declare
+/// one with [`crate::Contract`] and record the check with
+/// [`crate::contract_step`]; a violation surfaces as
+/// `TraceErr::ContractViolated`, which `on_step_failure` can treat
+/// differently from a tool that genuinely broke.
 #[async_trait]
 pub trait Agent: Send + Sync {
     /// The type consumed by this agent's `run` step.

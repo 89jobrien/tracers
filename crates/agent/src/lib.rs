@@ -48,10 +48,12 @@
 
 pub mod agent;
 pub mod context;
+pub mod contract;
 pub mod hooks;
 pub mod spawn;
 
 pub use agent::Agent;
 pub use context::AgentContext;
+pub use contract::{Contract, contract_step};
 pub use hooks::EscalationAction;
 pub use spawn::{SpawnOutcome, delegate, spawn};

@@ -68,6 +68,17 @@ pub enum TraceErr {
     )]
     Timeout { duration: Duration },
 
+    /// A step's declared pre- or postcondition was violated — the step
+    /// technically succeeded but produced something the contract forbids.
+    #[error("contract violated: {message}")]
+    #[diagnostic(
+        code(trace::contract_violated),
+        help(
+            "the step ran without erroring but broke an invariant it declared — fix the step logic, or relax the contract if the invariant was wrong. Distinct from ToolFailed: the tool worked, its output did not"
+        )
+    )]
+    ContractViolated { message: String },
+
     /// Serialization/deserialization failure (task or trace checkpoint).
     #[error("serialization error: {0}")]
     #[diagnostic(
@@ -99,6 +110,13 @@ impl TraceErr {
     pub fn tool_failed(tool: impl Into<String>, message: impl Into<String>) -> Self {
         Self::ToolFailed {
             tool: tool.into(),
+            message: message.into(),
+        }
+    }
+
+    /// Build a `ContractViolated` error from a violation message.
+    pub fn contract_violated(message: impl Into<String>) -> Self {
+        Self::ContractViolated {
             message: message.into(),
         }
     }
