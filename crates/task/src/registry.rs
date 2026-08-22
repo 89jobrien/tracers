@@ -113,12 +113,9 @@ impl TaskRegistry {
     // ── Internal helpers ──────────────────────────────────────────────────────
 
     fn dependencies_satisfied(&self, task: &Task) -> bool {
-        task.depends_on.iter().all(|dep_id| {
-            self.tasks
-                .get(dep_id)
-                .map(|dep| dep.is_done())
-                .unwrap_or(false)
-        })
+        task.depends_on
+            .iter()
+            .all(|dep_id| self.tasks.get(dep_id).is_some_and(|dep| dep.is_done()))
     }
 }
 

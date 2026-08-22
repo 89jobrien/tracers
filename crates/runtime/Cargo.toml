@@ -11,8 +11,8 @@ keywords.workspace    = true
 categories.workspace  = true
 
 [dependencies]
-trace-lang-core  = { version = "0.2.1", path = "../core" }
-trace-lang-agent = { version = "0.2.1", path = "../agent" }
+trace-lang-core  = { version = "0.2.2", path = "../core" }
+trace-lang-agent = { version = "0.2.2", path = "../agent" }
 serde         = { workspace = true }
 futures       = { workspace = true }
 async-trait   = { workspace = true, optional = true }
