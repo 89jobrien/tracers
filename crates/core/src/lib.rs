@@ -15,11 +15,16 @@
 //! assert_eq!(t.value(), Some(&"hello world"));
 //! assert_eq!(t.causal_chain().len(), 1);
 //! ```
+//!
+//! # Runnable examples
+//!
+//! End-to-end walkthroughs across all four crates live in the workspace's
+//! `examples/` directory:
+//!
+//! ```bash
+//! cargo run -p trace-lang-examples --example trace_basics
+//! ```
 
-// TODO: add an `examples/` directory demonstrating Trace<T>/Task/Agent usage
-// end-to-end — the doctest above is the only runnable usage sample in the
-// whole workspace despite all four crates being "usable as a library today".
-//
 // TODO: add benches/ (criterion) and fuzz/ (cargo-fuzz) — `taskit bench` and
 // `taskit fuzz` are both available subcommands already, currently unused.
 // A good fuzz target: Trace<T>/Task (de)serialization round-tripping, given

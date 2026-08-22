@@ -6,6 +6,7 @@ members = [
     "crates/agent",
     "crates/runtime",
     "crates/trace-test",
+    "examples",
     "xtask",
     # TODO: "crates/cli" — planned `trace-cli`, a doob-style CLI for
     # inspecting trace checkpoints (see CLAUDE.md "planned crates").

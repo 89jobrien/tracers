@@ -1,0 +1,45 @@
+[package]
+name        = "trace-lang-examples"
+description = "Runnable end-to-end examples for the trace:: crates"
+publish     = false
+version.workspace    = true
+edition.workspace    = true
+authors.workspace    = true
+license.workspace    = true
+
+# Examples live directly in this directory rather than in a nested
+# `examples/examples/`, which is what cargo's default layout would require.
+[[example]]
+name = "trace_basics"
+path = "trace_basics.rs"
+
+[[example]]
+name = "trace_graph"
+path = "trace_graph.rs"
+
+[[example]]
+name = "task_pipeline"
+path = "task_pipeline.rs"
+
+[[example]]
+name = "agent_escalation"
+path = "agent_escalation.rs"
+
+[[example]]
+name = "contracts"
+path = "contracts.rs"
+
+[[example]]
+name = "human_in_the_loop"
+path = "human_in_the_loop.rs"
+
+[dependencies]
+trace-lang-core    = { path = "../crates/core" }
+trace-lang-task    = { path = "../crates/task" }
+trace-lang-agent   = { path = "../crates/agent" }
+trace-lang-runtime = { path = "../crates/runtime" }
+async-trait = { workspace = true }
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+tokio       = { workspace = true }
+uuid        = { workspace = true }

@@ -72,22 +72,34 @@ pub async fn delegate<A: Agent + ?Sized>(
 }
 
 /// Shared hook-evaluation logic for `spawn` and `delegate`.
+///
+/// A hook signature is `fn(&self) -> EscalationAction` — it cannot see the
+/// trace it is reacting to. So an `ApprovalRequest` raised by a hook comes
+/// back unattached, and this is where it gets stamped with the trace that
+/// produced it: a caller must never receive a question about a run it
+/// cannot look up.
 fn evaluate<A: Agent + ?Sized>(agent: &A, trace: &Trace<A::Output>) -> EscalationAction {
-    if let Some(err) = trace.error() {
-        return match err {
+    let action = if let Some(err) = trace.error() {
+        match err {
             TraceErr::BudgetExhausted { .. } => agent.on_budget_exceeded(),
             _ => agent.on_step_failure(),
-        };
-    }
-
-    if !trace
+        }
+    } else if !trace
         .low_confidence_below(agent.confidence_threshold())
         .is_empty()
     {
-        return agent.on_low_confidence();
-    }
+        agent.on_low_confidence()
+    } else {
+        EscalationAction::None
+    };
 
-    EscalationAction::None
+    match action {
+        EscalationAction::RequireApproval(mut request) => {
+            request.attach(trace.trace_ref());
+            EscalationAction::RequireApproval(request)
+        }
+        other => other,
+    }
 }
 
 #[cfg(test)]
@@ -228,5 +240,60 @@ mod tests {
         ctx.record_step().unwrap();
         assert_eq!(ctx.budget_remaining(), Some(2));
         assert!(!ctx.is_budget_exhausted());
+    }
+    /// A hook cannot see the trace it is reacting to, so `spawn` must stamp
+    /// the request on the way out — otherwise a caller gets a question it
+    /// cannot trace back to a run.
+    struct AsksAHuman;
+
+    #[async_trait]
+    impl Agent for AsksAHuman {
+        type Input = ();
+        type Output = ();
+
+        fn name(&self) -> &str {
+            "AsksAHuman"
+        }
+        fn goal(&self) -> &str {
+            "refuse to proceed without a person"
+        }
+
+        async fn run(&self, _input: (), _ctx: &mut AgentContext) -> Trace<()> {
+            Trace::failed(TraceErr::other("needs sign-off"))
+        }
+
+        fn on_step_failure(&self) -> EscalationAction {
+            EscalationAction::RequireApproval(trace_lang_core::ApprovalRequest::unattached(
+                "proceed?",
+            ))
+        }
+    }
+
+    #[tokio::test]
+    async fn spawn_stamps_an_approval_request_with_the_trace_that_raised_it() {
+        let outcome = spawn(&AsksAHuman, ()).await;
+        let request = outcome
+            .escalation
+            .approval_request()
+            .expect("the hook asked for approval");
+
+        assert!(request.is_attached());
+        assert_eq!(request.trace, outcome.trace.trace_ref());
+    }
+
+    #[tokio::test]
+    async fn delegate_also_stamps_the_approval_request() {
+        let from = AgentContext::new("Caller", None);
+        let outcome = delegate(&AsksAHuman, (), &from).await;
+        let request = outcome
+            .escalation
+            .approval_request()
+            .expect("the hook asked for approval");
+
+        assert_eq!(request.trace, outcome.trace.trace_ref());
+        assert_eq!(
+            outcome.context.delegation_chain,
+            vec!["Caller", "AsksAHuman"]
+        );
     }
 }
