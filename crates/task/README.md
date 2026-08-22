@@ -59,8 +59,15 @@ A serializable, dependency-aware unit of work.
 Builder methods: `with_goal`, `with_priority`, `with_confidence`, `depends_on`.
 
 Status transitions: `assign_to(agent)` → `Running`; `complete(trace_ref)` → `Done`;
-`fail(error, trace_ref)` → `Failed`. `complete` and `fail` both clear `assigned_to`
-as a side effect. Status checks: `is_pending()`, `is_done()`, `is_failed()`.
+`fail(error, trace_ref)` → `Failed`; `pause(request)` → `Paused`;
+`resume(decision)` → `Pending` on approval, `Failed` on rejection. `complete`,
+`fail`, and a rejected `resume` all clear `assigned_to`; `pause` deliberately does
+not, because the work is suspended rather than finished and still belongs to the
+agent that raised the question. Status checks: `is_pending()`, `is_done()`,
+`is_failed()`, `is_paused()`, plus `approval_request()`.
+
+`resume` errors rather than doing anything if the task is not paused — resuming
+something that never stopped would silently discard whatever state it is in.
 
 ### `TaskStatus`
 
@@ -70,11 +77,14 @@ enum TaskStatus {
     Running,
     Done(TraceRef),
     Failed { error: TraceErr, trace: TraceRef },
+    Paused(ApprovalRequest),
 }
 ```
 
 `Done` and `Failed` both carry a `TraceRef` from `trace-lang-core` — no terminal state
-is ever detached from the execution that produced it.
+is ever detached from the execution that produced it. `Paused` carries an
+`ApprovalRequest`, which carries the partial trace that reached the pause, so the
+same rule holds while the work is stopped.
 
 ### `Priority`
 
@@ -96,9 +106,11 @@ Owns all tasks in a `HashMap<Uuid, Task>` and resolves dependency ordering.
 | `insert(task)` | — | insert or overwrite by id |
 | `get(id)` / `get_mut(id)` | `Option<&Task>` / `Option<&mut Task>` | lookup by id |
 | `complete(id, trace_ref, store)` | `Result<(), TraceErr>` | mark done, then checkpoint via `store` |
+| `pause(id, request, store)` | `Result<(), TraceErr>` | stop for a human decision, then checkpoint |
+| `resume(id, decision, store)` | `Result<(), TraceErr>` | apply that decision, then checkpoint |
 | `ready_tasks()` | `Vec<&Task>` | pending tasks whose dependencies are all `Done` |
-| `all_by_priority()` | `Vec<&Task>` | all tasks, `Critical` first |
-| `pending()` / `done()` / `failed()` | `Vec<&Task>` | partition by status |
+| `all_by_priority()` | `Vec<&Task>` | all tasks, `Critical` first (`HashMap` order within a priority — sort if you are printing it) |
+| `pending()` / `done()` / `failed()` / `paused()` | `Vec<&Task>` | partition by status |
 | `total()` | `usize` | task count |
 | `save(store)` | `Result<(), TraceErr>` | serialize the whole registry through `store` |
 | `TaskRegistry::load(store)` | `Result<Self, TraceErr>` | restore from `store` |
@@ -119,6 +131,22 @@ registry.complete(task.id, trace_ref, &store)?;
 
 // resume a crashed executor — no task is re-run unnecessarily
 let registry = TaskRegistry::load(&store)?;
+```
+
+The same mechanism carries human-in-the-loop pauses, which is the whole argument
+for putting them in the library rather than around it — no approval queue, no
+side table, no bespoke resume path:
+
+```rust
+use trace_lang_core::{ApprovalDecision, ApprovalRequest};
+
+registry.pause(task_id, request, &store)?;   // checkpointed; the process may exit
+
+let mut inbox = TaskRegistry::load(&store)?; // days later
+for task in inbox.paused() {
+    println!("{}", task.approval_request().expect("paused").question);
+}
+inbox.resume(task_id, ApprovalDecision::approve("joe"), &store)?;
 ```
 
 `TaskRegistry` depends only on the `CheckpointStore` trait, never on a concrete

@@ -135,7 +135,16 @@ assert_eq!(outcome.context.delegation_chain, vec!["Junior", "Senior"]);
 | --- | --- | --- |
 | `trace` | `Trace<O>` | final trace produced |
 | `context` | `AgentContext` | final context, including the full `delegation_chain` |
-| `unresolved` | `Option<EscalationAction>` | `Some` if the run stopped with an escalation still pending — `max_hops` reached, or the registry doesn't recognize the target. `None` means the chain terminated cleanly |
+| `unresolved` | `Option<EscalationAction>` | `Some` if the run stopped with an escalation still pending — `max_hops` reached, the registry doesn't recognize the target, or the escalation is one no agent can discharge (`RequireApproval`, `Emit`). `None` means the chain terminated cleanly |
+
+`RunOutcome::approval_request()` pulls the `ApprovalRequest` out of an unresolved
+`RequireApproval`. That is the handoff point to `trace-lang-task`: park the work
+with `TaskRegistry::pause(id, request, store)` and resume it when a decision
+arrives.
+
+Only `Delegate` is resolvable here. `Emit` and `RequireApproval` are returned rather
+than dropped — a hook that asked to abort, or to ask a person, made a decision the
+runtime is not entitled to discard.
 
 ## `join_all`
 
@@ -196,14 +205,54 @@ exhaustively within bounds.
 **Panics:** `speculate` panics if `candidates` is empty — there is nothing to
 speculate over.
 
+## `speculate_race`
+
+```rust
+pub async fn speculate_race<I, O>(
+    candidates: Vec<(String, Arc<dyn Agent<Input = I, Output = O>>)>,
+    input: I,
+    threshold: f64,
+) -> Trace<O>
+where
+    I: Clone + Send,
+    O: Clone + Serialize + Send;
+```
+
+`speculate` runs every candidate to completion before choosing. That is right when
+you genuinely want to compare all of them, and wasteful when a good-enough answer
+arrives early — you have already paid the latency and cost of every losing branch by
+the time you look. `speculate_race` returns as soon as one candidate clears
+`threshold` and drops the rest, so the trade is a parameter rather than a fork in
+the API: a high threshold behaves almost like `speculate`, a low one behaves almost
+like "take the first plausible answer".
+
+```rust
+let trace = speculate_race(candidates, task, 0.8).await;
+```
+
+**Three outcomes, not two.** The recorded `"speculate_race"` step distinguishes the
+winner (`Taken`), a candidate that finished and lost (`Rejected`, with its score),
+and one still in flight when the race ended (`Cancelled`, with **no** confidence —
+it never reported a score, and `0.0` would claim it was bad rather than unfinished).
+
+**Fallback:** if nothing clears the bar, every candidate finishes and the winner is
+chosen exactly as `speculate` chooses it, ties included.
+
+**Threshold:** clamped into `[0.0, 1.0]`, so a negative value cannot let a failed
+candidate (scored `-1.0`) win the race. One threshold covers every candidate: it
+expresses the caller's bar for "good enough to stop paying for alternatives", not a
+property of any one agent — an agent's own reliability already shows up in the
+confidence it reports.
+
 ## Known limitation
 
-`join_all` and `speculate` both use `futures::future::join_all`, which polls
-concurrently on the current task rather than distributing across OS threads.
+`join_all` and `speculate` use `futures::future::join_all` and `speculate_race` a
+`FuturesUnordered`, all of which poll concurrently on the current task rather than
+distributing across OS threads.
 True multi-threaded parallelism (via `tokio::spawn` and `'static` agents,
 typically `Arc<dyn Agent<...>>` throughout) and a shared step-budget spanning
 concurrent branches are both tracked as open follow-ups, not silently assumed —
-see this repo's root `CLAUDE.md` ("deferred") and `.ctx/HANDOFF.md`.
+see this repo's root `CLAUDE.md` ("deferred") and `HANDOFF.yaml`.
 
 ## Testing
 

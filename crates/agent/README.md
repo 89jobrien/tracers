@@ -105,13 +105,22 @@ always reconstructable from `delegation_chain` alone.
 
 ```rust
 enum EscalationAction {
-    None,               // proceed as normal
-    Delegate(String),   // hand off to another agent, named
-    Emit(TraceErr),     // abort with this error rather than escalating further
+    None,                             // proceed as normal
+    Delegate(String),                 // hand off to another agent, named
+    Emit(TraceErr),                   // abort with this error rather than escalating further
+    RequireApproval(ApprovalRequest), // stop and wait for a person
 }
 ```
 
-Helpers: `is_none()`, `delegate_target() -> Option<&str>`.
+Helpers: `is_none()`, `delegate_target() -> Option<&str>`,
+`approval_request() -> Option<&ApprovalRequest>`, and `needs_a_human()` — true for
+`RequireApproval` and `Emit`, the two actions no registry can discharge.
+
+`RequireApproval` is not a delegation to a "HumanReviewer" agent; that already
+works through `Delegate` and is fine when "human" is really another named endpoint.
+This is a genuine stop-the-world pause: the caller parks the work (typically as
+`TaskStatus::Paused` in a checkpointed `TaskRegistry`) and resumes it when a
+decision arrives through some external channel, possibly days later.
 
 ## `spawn` and `delegate`
 
@@ -146,9 +155,52 @@ Hook evaluation logic (shared between `spawn` and `delegate`): a
 `on_step_failure`; a successful trace with any step below `confidence_threshold`
 consults `on_low_confidence`; otherwise `EscalationAction::None`.
 
+One thing evaluation does on its own: a hook's signature is
+`fn(&self) -> EscalationAction`, so a hook raising an `ApprovalRequest` cannot see
+the trace it is reacting to. Build it with `ApprovalRequest::unattached(question)`
+and `spawn`/`delegate` stamp the real `TraceRef` on the way out, so a caller never
+receives a question about a run it cannot look up.
+
 `spawn` and `delegate` do not act on the returned escalation — delegation is not
 performed automatically. `trace-lang-runtime::run_with_escalation` is the layer that
 resolves `Delegate(name)` against a live agent registry and re-runs.
+
+## `Contract<I, O>`
+
+Design-by-contract for a single step. A step can be *technically* successful — no
+`TraceErr`, no panic — and still substantively wrong: an empty summary, a malformed
+identifier, a number outside its range.
+
+```rust
+use trace_lang_agent::{Contract, contract_step};
+
+let contract: Contract<String, Summary> = Contract::new()
+    .pre(|source: &String| {
+        if source.trim().is_empty() { Err("nothing to summarize".into()) } else { Ok(()) }
+    })
+    .post(|summary: &Summary| {
+        if summary.text.is_empty() { Err("summary must not be empty".into()) } else { Ok(()) }
+    });
+
+let checked = contract.check_post(&output);
+trace.push_step(contract_step("summary-contract", &checked));
+```
+
+`check_pre`/`check_post` return `Result<(), TraceErr>`, with a violation becoming
+`TraceErr::ContractViolated { message }` naming the invariant that broke
+(`"postcondition: summary must not be empty"`). That is a distinct variant from
+`ToolFailed` on purpose: `on_step_failure` should treat "the tool broke" (retry) and
+"the tool worked and returned something forbidden" (escalate to someone who
+understands the domain) differently.
+
+`contract_step(name, &outcome)` turns a check into the `Step` that records it —
+`Taken` when the invariant held, `Failed { message }` when it did not. A satisfied
+contract is still worth a step: it is evidence the invariant held at that point in
+the chain.
+
+Checking is explicit at the call site inside `Agent::run`, so an agent in a hot loop
+simply doesn't call it — there is no global toggle to keep in sync, and no per-agent
+opt-in flag to declare.
 
 ## Testing
 

@@ -42,6 +42,8 @@ t.causal_chain()       // how did we get here?
 t.rejected_branches()  // what did we consider and discard?
 t.bottlenecks()        // where did we slow down?
 t.low_confidence()     // where were we uncertain?
+t.total_cost()         // what did that cost, in tokens and dollars?
+t.priciest_steps()     // and where did the money actually go?
 ```
 
 `Trace<T>` is to reasoning what `Result<T, E>` is to errors: a typed,
@@ -89,6 +91,29 @@ let registry = TaskRegistry::load(&store)?;
 `TaskRegistry` only depends on the `CheckpointStore` trait — swap
 `FileCheckpointStore` for any other backend (S3, a database, an in-memory
 buffer for tests) without touching registry code.
+
+### waiting on a human
+
+Because every transition already checkpoints, "stopped, waiting on a person"
+needs no new machinery — it is another state the registry persists:
+
+```rust
+use trace_lang_core::{ApprovalDecision, ApprovalRequest};
+
+// an agent escalated with EscalationAction::RequireApproval
+registry.pause(task.id, request, &store)?;
+
+// the process exits. days later, from a checkpoint on disk:
+let mut inbox = TaskRegistry::load(&store)?;
+for task in inbox.paused() {
+    println!("{}", task.approval_request().unwrap().question);
+}
+
+inbox.resume(task.id, ApprovalDecision::approve("joe"), &store)?;
+```
+
+An approval returns the task to `Pending`; a rejection fails it with
+`TraceErr::ApprovalDenied`, against the same partial trace the approver saw.
 
 ---
 
@@ -196,10 +221,20 @@ let trace = speculate(candidates, task).await;
 // losing candidates are recorded as rejected Branches on a "speculate" step
 ```
 
-`join_all` and `speculate` currently run concurrently on the same task (via
-`futures::future::join_all`) rather than across OS threads, and there's no
-shared step-budget spanning concurrent branches yet — both are tracked as
-open follow-ups rather than silently assumed.
+`speculate_race` is the same fan-out with an early exit: it returns as soon
+as one candidate clears a confidence threshold and cancels the rest, so the
+accuracy/latency/cost trade is a parameter rather than a fork in the API.
+A cancelled candidate is recorded as `BranchOutcome::Cancelled` with no
+confidence score — it never finished, and calling that "rejected: lower
+confidence" would be a different and untrue claim.
+
+An escalation no agent can discharge — `RequireApproval`, or `Emit` — comes
+back in `RunOutcome::unresolved` for the caller to act on.
+
+`join_all`, `speculate`, and `speculate_race` currently run concurrently on
+the same task rather than across OS threads, and there's no shared
+step-budget spanning concurrent branches yet — both are tracked as open
+follow-ups rather than silently assumed.
 
 ---
 
@@ -228,6 +263,79 @@ speculate {
 }
 pick_best(|plans| plans.max_by(|p| p.confidence))
 ```
+
+---
+
+## contracts
+
+A step can be *technically* successful — no `TraceErr`, no panic — and still
+substantively wrong. `Contract<I, O>` makes that a recorded trace event
+instead of a bug someone files after noticing bad output downstream:
+
+```rust
+use trace_lang_agent::{Contract, contract_step};
+
+let contract: Contract<String, String> = Contract::new()
+    .post(|summary: &String| {
+        if summary.is_empty() { Err("summary must not be empty".into()) } else { Ok(()) }
+    });
+
+let checked = contract.check_post(&output);
+trace.push_step(contract_step("summary-contract", &checked));
+```
+
+A violation produces `TraceErr::ContractViolated`, so `on_step_failure` can
+tell "the tool broke" (retry) from "the tool worked and returned something
+forbidden" (ask someone who understands the invariant).
+
+---
+
+## lineage across traces
+
+`causal_chain()` explains one run. `TraceGraph` explains how runs caused each
+other — the question a task graph alone can't answer:
+
+```rust
+use trace_lang_core::{TraceGraph, TraceNode};
+
+let mut graph = TraceGraph::new();
+graph.record_node(TraceNode::from_trace(&fetch, "Fetcher"));
+graph.record_node(TraceNode::from_trace(&summarize, "Summarizer"));
+graph.record_edge(fetch.trace_ref(), summarize.trace_ref());
+
+graph.downstream_of(&fetch.trace_ref());  // what did this contaminate?
+graph.upstream_of(&publish.trace_ref());  // why did this fail, three hops back?
+graph.critical_path();                    // where does the latency come from?
+```
+
+---
+
+## inspecting checkpoints
+
+`trace-cli` installs a `trace` binary that reads a checkpoint file:
+
+```bash
+trace list  checkpoint.trace.json --status paused
+trace show  checkpoint.trace.json 1a2b3c4d
+trace chain checkpoint.trace.json trace::9f8e...
+trace diff  before.trace.json after.trace.json
+```
+
+Every command takes `--json`. See [crates/cli/README.md](crates/cli/README.md).
+
+---
+
+## examples
+
+Six runnable walkthroughs, one per idea above:
+
+```bash
+cargo run -p trace-lang-examples --example trace_basics
+cargo run -p trace-lang-examples --example human_in_the_loop
+```
+
+See [examples/README.md](examples/README.md) for the full list. They are built
+by `cargo test --workspace`, so an API change that breaks one breaks the build.
 
 ---
 
@@ -265,9 +373,9 @@ pattern as Rust trait objects.
 
 ## status
 
-Early design + reference implementation. All four crates — `trace-lang-core`,
-`trace-lang-task`, `trace-lang-agent`, and `trace-lang-runtime` — compile
-(`cargo check --workspace`) and are usable as Rust libraries today. The
+Early design + reference implementation. Every crate in the table above
+compiles (`cargo check --workspace`), is covered by tests, and is usable
+today — as libraries, and as the `trace` binary. MSRV is 1.88. The
 `trace::` surface syntax and compiler shown above (`agent Planner { .. }`,
 `branch { .. }`, `speculate { .. }`) are design artifacts, not yet
 implemented — contributions and discussion welcome.

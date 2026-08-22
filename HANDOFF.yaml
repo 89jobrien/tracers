@@ -1,24 +1,106 @@
 project: tracers
-updated: 2026-08-16
+updated: 2026-08-22
 notes: >
-  Completed trace-test crate and initial release v0.1.0. Built end-to-end test
-  framework with TraceOutcome port, assertion primitives, assert_trace! macro,
-  property tests, and integration tests against escalation chain. Runtime
-  self-dependency version needs resolution before next publish.
+  Cleared every actionable TODO marker in the tree. Shipped the step cost
+  ledger, TraceGraph, step contracts, human-in-the-loop pause/resume,
+  speculate_race, the trace-cli checkpoint inspector, a runnable examples
+  crate, criterion benches, and two cargo-fuzz targets — plus the
+  configuration and CI items (MSRV, docs.rs metadata, cross-platform matrix,
+  cargo-deny skip, taskit surfaces and steps). The only markers left are the
+  two CLAUDE.md lists as explicitly deferred.
 
 items:
   - id: 1
     title: "Resolve runtime self-dependency version constraint before first publish"
     description: >
-      trace-lang-runtime depends on itself for testing but has no explicit
-      version constraint. This needs to be formalized in Cargo.toml with
-      a proper version specification before publishing to crates.io.
+      trace-lang-runtime depends on itself for testing. Resolved deliberately
+      rather than by adding a version: the dev-dependency is path-only, which
+      cargo strips from the published manifest. A versioned self-dep cannot
+      resolve during a first publish (the crate is not in the index yet) and
+      consumers never need it. The reasoning is recorded in
+      crates/runtime/Cargo.toml next to the dependency.
     priority: P1
+    status: done
+    files:
+      - crates/runtime/Cargo.toml
+
+  - id: 2
+    title: "Thread-parallel join_all / speculate / speculate_race"
+    description: >
+      All three are concurrent-on-one-task (futures::future::join_all,
+      FuturesUnordered), not distributed across OS threads. A tokio::spawn
+      variant needs 'static agents — Arc<dyn Agent<...>> throughout — which is
+      a bigger API change than the combinators themselves. Deliberately
+      deferred, and stated as such in every doc that mentions the combinators
+      rather than silently assumed to work.
+    priority: P2
     status: open
     files:
-      - /Users/joe/dev/tracers/crates/runtime/Cargo.toml
+      - crates/runtime/src/join.rs
+      - crates/runtime/src/speculate.rs
+
+  - id: 3
+    title: "Shared step budget across concurrent branches"
+    description: >
+      AgentContext::budget is per-run. speculate, speculate_race, and join_all
+      each give every candidate its own independent budget, so N candidates
+      can cost N budgets. A SharedBudget (Arc<AtomicUsize>) capping total steps
+      across concurrent branches needs a new optional field threaded through
+      AgentContext and record_step().
+    priority: P3
+    status: open
+    files:
+      - crates/agent/src/context.rs
+
+  - id: 4
+    title: "Remaining FEATURES.md proposals: typed trust, confidence decay, replay"
+    description: >
+      Trace<T, Trust> (#1), confidence decay (#2), and deterministic
+      replay/diffing (#4) are the three proposals still unimplemented. Each has
+      open design questions recorded in docs/ideas/FEATURES.md — the phantom
+      trust parameter's ergonomic cost across every crate, whether decay should
+      compound along a chain, and what "changed" means when diffing text
+      output. Design before code.
+    priority: P3
+    status: open
+    files:
+      - docs/ideas/FEATURES.md
 
 log:
+  - date: 2026-08-22
+    summary: >
+      TODO-clearing pass across the whole tree. Core gained a step cost ledger
+      (StepCost, Trace::total_cost/priciest_steps), TraceGraph for cross-trace
+      lineage, and ApprovalRequest/ApprovalDecision. Agent gained Contract<I,O>
+      with a dedicated TraceErr::ContractViolated, and
+      EscalationAction::RequireApproval. Task gained TaskStatus::Paused with
+      pause/resume on both Task and TaskRegistry — human-in-the-loop needed no
+      new storage, since the registry already checkpoints every transition.
+      Runtime gained speculate_race (early exit on a confidence threshold,
+      cancelled candidates recorded as a new BranchOutcome::Cancelled) and now
+      returns Emit/RequireApproval in RunOutcome::unresolved instead of
+      dropping them. Shipped trace-cli (`trace` binary: list/show/chain/diff,
+      each with --json), a six-example workspace crate, criterion benches, and
+      two cargo-fuzz targets.
+
+      The fuzzer earned its place immediately: serde_json's default float
+      parser loses an ULP on some extreme-exponent f64s, so a confidence or
+      dollars value drifted on every checkpoint save/load cycle. The workspace
+      now enables serde_json's float_roundtrip feature, pinned by a unit test.
+
+      Also cleared the config TODOs: MSRV 1.88 (verified — 1.87 rejects the
+      let-chains in context.rs) enforced by a CI job that reads the manifest,
+      docs.rs metadata and badges per crate, a cross-platform test matrix, the
+      unicode-width cargo-deny skip, two new taskit protocol surfaces, bench
+      and fuzz CI steps, and max_todo_fixme lowered from 20 to 5. Fixed one
+      pre-existing failure found along the way: xtask pinned 0.1.0 while
+      `taskit patch` never bumps it, so `taskit inspect`'s version-consistency
+      check could never pass; xtask now inherits the workspace version.
+
+      Full workspace green: cargo test, clippy -D warnings, fmt, cargo deny,
+      taskit inspect, and both fuzz targets clean.
+    commits: []
+
   - date: 2026-08-16
     summary: >
       Built trace-test crate end-to-end: scaffolded and registered in workspace,

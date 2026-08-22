@@ -2,6 +2,47 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Documentation
+
+- Add a runnable examples crate
+
+### Features
+
+- Add step cost ledger
+- Add TraceGraph for cross-trace lineage
+- Add Contract step pre/post-conditions
+- Add pausable, resumable traces for human-in-the-loop
+- Add speculate_race early-exit combinator
+- Add trace-cli, a checkpoint inspector
+
+### Miscellaneous
+
+- Enable post-auto push of main and flow branches
+- Rust-audit mechanical fixes - derives, docs, crate metadata
+- Clear the remaining configuration and CI TODOs
+
+### Testing
+
+- Add criterion benches and cargo-fuzz targets
+
+### Flow
+
+- Promote develop into staging
+- Stage staging into release
+- Finish release into main
+- Sync main into develop
+- Promote develop into staging
+- Stage staging into release
+- Finish release into main
+
+## [0.2.1] - 2026-08-18
+
+### Bug Fixes
+
+- Make self dev-dependency path-only so first publish can resolve
+
 ## [0.2.0] - 2026-08-17
 
 ### Features

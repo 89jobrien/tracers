@@ -27,10 +27,28 @@ items:
     description: >
       A doob-style CLI for inspecting .trace.json checkpoint files.
       Commands: list, show <task-id>, chain <trace-ref>, diff <ref1> <ref2>.
+      Done: shipped as crates/cli (package trace-cli, binary `trace`). All four
+      commands, each with --json. Queries are public library API so in-process
+      callers need not shell out; checkpoints are read through CheckpointStore
+      rather than std::fs. Integration tests drive the real binary.
     priority: P3
-    status: open
+    status: done
     files:
-      - crates/trace-cli/
+      - crates/cli/
+
+  - id: h008
+    title: implement the actionable FEATURES.md proposals
+    description: >
+      Done: step cost ledger (#3), pausable/resumable traces (#5), contracts
+      (#6), TraceGraph (#7), and speculate_race (#8) are all implemented, with
+      each proposal's open design questions resolved in the code and recorded
+      in CLAUDE.md. Typed trust (#1), confidence decay (#2), and deterministic
+      replay (#4) remain proposals — they have real open questions rather than
+      just unwritten code.
+    priority: P2
+    status: done
+    files:
+      - docs/ideas/FEATURES.md
 
   - id: h006
     title: thread-parallel join_all / speculate
@@ -43,8 +61,8 @@ items:
     priority: P2
     status: open
     files:
-      - crates/trace-runtime/src/join.rs
-      - crates/trace-runtime/src/speculate.rs
+      - crates/runtime/src/join.rs
+      - crates/runtime/src/speculate.rs
 
   - id: h007
     title: shared step budget across concurrent branches
@@ -58,7 +76,7 @@ items:
     priority: P3
     status: open
     files:
-      - crates/trace-agent/src/context.rs
+      - crates/agent/src/context.rs
 
 log:
   - session: 3

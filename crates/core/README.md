@@ -54,6 +54,8 @@ the ordered list of `Step`s that produced it.
 | `bottlenecks()` | `Vec<&Step>` | steps sorted slowest-first |
 | `low_confidence()` | `Vec<&Step>` | steps below confidence `0.7` |
 | `low_confidence_below(threshold)` | `Vec<&Step>` | steps below an arbitrary threshold |
+| `total_cost()` | `StepCost` | summed tokens and dollars across every step that recorded a cost |
+| `priciest_steps()` | `Vec<&Step>` | steps sorted by dollars, then tokens, descending |
 
 `Trace<T>` implements `From<Trace<T>> for Result<T, TraceErr>`, so `let v: T = trace?;`
 works in any function returning `Result<_, TraceErr>` — the same ergonomics as `Result`
@@ -76,11 +78,82 @@ let step = Step::named("search")
     .with_note("used cached index");
 ```
 
+### `StepCost`
+
+What a step cost to produce: `input_tokens`, `output_tokens`, and an optional
+`dollars`. Implements `Add`/`AddAssign`/`Sum` (token counts saturate; `dollars` is
+`Some` iff at least one operand recorded one, so a partially-priced trace reports
+the spend it does know about rather than `None`).
+
+```rust
+use trace_lang_core::{Step, StepCost};
+
+let step = Step::named("summarize")
+    .with_cost(StepCost::new(1_200, 340).with_dollars(0.0042));
+```
+
+The dollar figure is recorded at step time rather than computed lazily against a
+pricing table: a checkpoint written today should still report what the run actually
+cost after the provider reprices. `Step::cost` is `#[serde(default)]`, so
+checkpoints written before the ledger existed still deserialize.
+
 ### `Branch`
 
-A path that was *considered* during a step — either taken or rejected. `speculate`
-produces one `Branch` per candidate, marking the winner `Taken` and the rest
-`Rejected { reason }`.
+A path that was *considered* during a step. `speculate` produces one `Branch` per
+candidate, marking the winner `Taken` and the rest `Rejected { reason }`.
+`speculate_race` adds a third outcome: `Cancelled { reason }`, for a candidate
+dropped before it finished. A cancelled branch carries **no** confidence — it never
+reported one, and `0.0` would say it was bad rather than unfinished.
+
+### `TraceGraph`
+
+Lineage *between* traces. `causal_chain()` explains one run; `TraceGraph` explains
+which run caused which — the same idea as `Task::depends_on`, one level down.
+
+| method | purpose |
+| --- | --- |
+| `record_node(node)` | insert or replace a `TraceNode` |
+| `record_edge(producer, consumer)` | record that one trace's output fed another; ignores self-edges and duplicates, and creates unlabelled placeholders for unknown refs |
+| `node(&trace_ref)` / `edges()` / `len()` / `is_empty()` | accessors |
+| `downstream_of(&trace_ref)` | every trace transitively caused by this one, breadth-first |
+| `upstream_of(&trace_ref)` | every trace that transitively fed into this one |
+| `critical_path()` | the chain that dominates latency — ranked by summed node duration, tie-broken by hop count |
+
+`TraceNode::from_trace(&trace, label)` builds a node timed by summing the trace's
+step durations. Edges are recorded explicitly rather than inferred: automatic edges
+would need producer identity threaded through every `spawn`/`delegate` call, and a
+partially-populated lineage graph is worse than an empty one.
+
+```rust
+use trace_lang_core::{TraceGraph, TraceNode};
+
+let mut graph = TraceGraph::new();
+graph.record_node(TraceNode::from_trace(&fetch, "Fetcher"));
+graph.record_node(TraceNode::from_trace(&summarize, "Summarizer"));
+graph.record_edge(fetch.trace_ref(), summarize.trace_ref());
+
+assert_eq!(graph.downstream_of(&fetch.trace_ref())[0].label, "Summarizer");
+```
+
+### `ApprovalRequest` / `ApprovalDecision`
+
+A question a pipeline stopped to ask a person, and the answer. Used by
+`EscalationAction::RequireApproval` in `trace-lang-agent` and
+`TaskStatus::Paused` in `trace-lang-task`.
+
+An `ApprovalRequest` carries the question, arbitrary JSON context, a stable id for
+an external channel to correlate against, `requested_at`/`age()`, and the
+`TraceRef` of the partial trace that reached the pause — an approver is never asked
+to decide without the provenance that led there.
+
+A lifecycle hook can't see its own trace, so `ApprovalRequest::unattached(question)`
+leaves the `TraceRef` blank and `spawn`/`delegate` stamp the real one before handing
+the escalation back. `attach` is one-way: a request that already names its trace is
+left alone.
+
+`ApprovalDecision` is `approve(by)` / `approve_with_note(by, note)` /
+`reject(by, reason)`. Both variants record *who* decided — an approval nobody is
+accountable for is not much of an approval.
 
 ### `TraceErr`
 
@@ -97,6 +170,8 @@ render with `miette`'s fancy formatting.
 | `DelegationFailed { trace_id, message }` | a delegated agent returned an error |
 | `LowConfidence { score, threshold }` | a step's confidence fell below threshold |
 | `Timeout { duration }` | a step exceeded its time limit |
+| `ApprovalDenied { by, reason }` | a human rejected an `ApprovalRequest` |
+| `ContractViolated { message }` | a step succeeded but broke an invariant it declared |
 | `Serde(String)` | serialization/deserialization failure |
 | `Other(String)` | catch-all |
 
@@ -123,11 +198,30 @@ Every public type derives `Serialize + Deserialize` — this is a compile-time
 constraint, not a convention, since `trace-lang-task` checkpoints traces alongside
 `TaskRegistry`.
 
+The workspace enables serde_json's `float_roundtrip` feature, which is **off by
+default**. Without it, serde_json's fast float parser loses an ULP on some
+extreme-exponent `f64`s, so a `confidence` or `dollars` value drifts a little on
+every save/load cycle. The `trace_roundtrip` fuzz target found this; a unit test in
+`src/trace.rs` pins both offending values bit-for-bit. A trace is a record, not an
+approximation of one.
+
 ## Testing
 
 Unit tests live alongside each module (`#[cfg(test)] mod tests`). `Step` and
 `Branch`'s confidence-clamping is additionally covered by `proptest` property tests
-verifying `with_confidence` always lands in `[0.0, 1.0]` regardless of input.
+verifying `with_confidence` always lands in `[0.0, 1.0]` regardless of input, and
+`TraceGraph::critical_path` by one asserting it always returns a real, non-repeating
+walk for any edge set — including cyclic ones.
+
+```bash
+cargo test  -p trace-lang-core
+cargo bench -p trace-lang-core   # criterion; benches/trace.rs
+```
+
+Benchmarks cover the per-step cost of `push_step`, the inspection queries at
+10/100/1,000 steps, serde round-trips (on the hot path, since `TaskRegistry::save`
+runs after every transition), and `critical_path`. Fuzz targets live in the
+workspace's `fuzz/` directory.
 
 ```bash
 cargo test -p trace-lang-core
