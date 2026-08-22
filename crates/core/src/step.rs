@@ -125,8 +125,13 @@ pub struct Branch {
 pub enum BranchOutcome {
     /// This branch was selected.
     Taken,
-    /// This branch was considered but discarded.
+    /// This branch ran to completion and was discarded on its merits.
     Rejected { reason: String },
+    /// This branch was abandoned before it finished, so it never reported
+    /// a result to be judged on. Distinct from `Rejected` on purpose:
+    /// "we stopped paying for this" is a different fact from "we compared
+    /// it and it lost", and `speculate_race` produces both.
+    Cancelled { reason: String },
 }
 
 impl Branch {
@@ -152,10 +157,40 @@ impl Branch {
         }
     }
 
+    /// Construct a `Branch` marked `Cancelled` — a candidate dropped before
+    /// it produced anything. Leave `confidence` unset: a cancelled branch
+    /// has no score, and recording `0.0` would misreport it as bad rather
+    /// than as unfinished.
+    pub fn cancelled(label: impl Into<String>, reason: impl Into<String>) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            label: label.into(),
+            outcome: BranchOutcome::Cancelled {
+                reason: reason.into(),
+            },
+            confidence: None,
+        }
+    }
+
     /// Builder: attach a confidence score, clamped into `[0.0, 1.0]`.
     pub fn with_confidence(mut self, confidence: f64) -> Self {
         self.confidence = Some(confidence.clamp(0.0, 1.0));
         self
+    }
+
+    /// True if this branch was the one selected.
+    pub fn is_taken(&self) -> bool {
+        matches!(self.outcome, BranchOutcome::Taken)
+    }
+
+    /// True if this branch finished and lost.
+    pub fn is_rejected(&self) -> bool {
+        matches!(self.outcome, BranchOutcome::Rejected { .. })
+    }
+
+    /// True if this branch was abandoned before finishing.
+    pub fn is_cancelled(&self) -> bool {
+        matches!(self.outcome, BranchOutcome::Cancelled { .. })
     }
 }
 
@@ -216,6 +251,17 @@ mod tests {
             Branch::taken("a").with_confidence(2.0).confidence,
             Some(1.0)
         );
+    }
+
+    #[test]
+    fn a_cancelled_branch_has_no_confidence_score() {
+        let branch = Branch::cancelled("slow-model", "a faster candidate cleared the bar");
+        assert!(branch.is_cancelled());
+        assert!(!branch.is_rejected());
+        assert!(!branch.is_taken());
+        // It never finished, so it has nothing to be scored on — 0.0 would
+        // read as "it was bad", which is a different claim.
+        assert_eq!(branch.confidence, None);
     }
 
     #[test]

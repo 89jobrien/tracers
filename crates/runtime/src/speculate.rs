@@ -1,12 +1,12 @@
+use futures::StreamExt;
+use futures::stream::FuturesUnordered;
 use serde::Serialize;
 use std::sync::Arc;
 use trace_lang_agent::{Agent, spawn};
 use trace_lang_core::{Branch, Step, Trace};
 
 // TODO: thread-parallel variant via `tokio::spawn` (see matching TODO in
-// join.rs), and `speculate_race` — early-exit once a candidate crosses a
-// confidence threshold (docs/ideas/FEATURES.md #8), racing via
-// `tokio::select!`/`FuturesUnordered` instead of this fn's full `join_all`.
+// join.rs).
 // TODO: also see the deferred "shared/global step budget across concurrent
 // branches" item in CLAUDE.md — `AgentContext::budget` is per-run only.
 
@@ -112,6 +112,154 @@ where
         .nth(winner_idx)
         .map(|(_, t)| t)
         .expect("winner_idx is always within results' bounds");
+    winning.push_step(step);
+    winning
+}
+
+/// Race several candidate agents against the same input and stop as soon
+/// as one clears `threshold`, cancelling the rest.
+///
+/// [`speculate`] runs every candidate to completion before choosing. That
+/// is right when you genuinely want to compare all of them, and wasteful
+/// when a "good enough" answer arrives early — you have already paid the
+/// full latency and cost of every losing branch by the time you look.
+/// `speculate_race` makes that trade a parameter rather than a choice
+/// between two APIs: a high `threshold` behaves almost like `speculate`, a
+/// low one behaves almost like "take the first plausible answer".
+///
+/// If no candidate clears the bar, every candidate finishes and the winner
+/// is chosen exactly as `speculate` chooses it — highest mean confidence,
+/// ties going to the first candidate in order.
+///
+/// The recorded `speculate_race` step distinguishes three outcomes, which
+/// is the point of racing rather than comparing:
+///
+/// - the winner is `BranchOutcome::Taken`
+/// - a candidate that finished and lost is `Rejected`, with its score
+/// - a candidate still in flight when the race ended is `Cancelled`, with
+///   **no** confidence — it never reported one, and recording `0.0` would
+///   claim it was bad rather than unfinished
+///
+/// `threshold` is clamped into `[0.0, 1.0]`. One threshold covers every
+/// candidate: it expresses the caller's bar for "good enough to stop
+/// paying for alternatives", not a property of any one agent — an agent's
+/// own reliability already shows up in the confidence it reports.
+///
+/// # Panics
+///
+/// Panics if `candidates` is empty — there is nothing to race.
+///
+/// ```rust
+/// use trace_lang_agent::{Agent, AgentContext};
+/// use trace_lang_core::{Step, Trace};
+/// use trace_lang_runtime::speculate_race;
+/// use async_trait::async_trait;
+/// use std::sync::Arc;
+///
+/// struct Guess(&'static str, f64);
+/// #[async_trait]
+/// impl Agent for Guess {
+///     type Input = ();
+///     type Output = &'static str;
+///     fn name(&self) -> &str { self.0 }
+///     fn goal(&self) -> &str { "produce a candidate answer" }
+///     async fn run(&self, _input: (), ctx: &mut AgentContext) -> Trace<&'static str> {
+///         ctx.record_step().unwrap();
+///         let mut t = Trace::new(self.0);
+///         t.push_step(Step::named("guess").with_confidence(self.1));
+///         t
+///     }
+/// }
+///
+/// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+/// let candidates: Vec<(String, Arc<dyn Agent<Input = (), Output = &'static str>>)> = vec![
+///     ("good-enough".to_string(), Arc::new(Guess("good enough", 0.85))),
+///     ("cautious".to_string(), Arc::new(Guess("cautious", 0.40))),
+/// ];
+///
+/// // 0.8 is cleared by the first candidate, so the race can stop early.
+/// let trace = speculate_race(candidates, (), 0.8).await;
+/// assert_eq!(trace.value(), Some(&"good enough"));
+/// # });
+/// ```
+pub async fn speculate_race<I, O>(
+    candidates: Vec<(String, Arc<dyn Agent<Input = I, Output = O>>)>,
+    input: I,
+    threshold: f64,
+) -> Trace<O>
+where
+    I: Clone + Send,
+    O: Clone + Serialize + Send,
+{
+    assert!(
+        !candidates.is_empty(),
+        "speculate_race requires at least one candidate"
+    );
+    // Clamped so a negative threshold can't let a *failed* candidate
+    // (scored -1.0) win the race by default.
+    let threshold = threshold.clamp(0.0, 1.0);
+
+    let mut racing = FuturesUnordered::new();
+    for (index, (_, agent)) in candidates.iter().enumerate() {
+        let agent = Arc::clone(agent);
+        let input = input.clone();
+        racing.push(async move {
+            let outcome = spawn(agent.as_ref(), input).await;
+            (index, outcome.trace)
+        });
+    }
+
+    // Keyed by candidate index, not completion order, so the recorded
+    // branches read in the order the caller declared them.
+    let mut finished: Vec<Option<Trace<O>>> = (0..candidates.len()).map(|_| None).collect();
+    let mut early_winner: Option<usize> = None;
+
+    while let Some((index, trace)) = racing.next().await {
+        let cleared = confidence_of(&trace) >= threshold;
+        finished[index] = Some(trace);
+        if cleared {
+            early_winner = Some(index);
+            break;
+        }
+    }
+    // Dropping the stream cancels whatever is still in flight.
+    drop(racing);
+
+    let scores: Vec<f64> = finished
+        .iter()
+        .map(|t| t.as_ref().map(confidence_of).unwrap_or(f64::NEG_INFINITY))
+        .collect();
+    let winner_idx = early_winner.unwrap_or_else(|| first_max_index(&scores));
+    let winner_label = candidates[winner_idx].0.clone();
+
+    let mut step = Step::named("speculate_race").with_note(format!(
+        "stopped at the first candidate above {threshold:.2}"
+    ));
+    for (index, (label, _)) in candidates.iter().enumerate() {
+        let branch = match (&finished[index], index == winner_idx) {
+            (_, true) => Branch::taken(label.clone()).with_confidence(scores[index]),
+            (Some(trace), false) => {
+                let reason = trace.error().map(|e| e.to_string()).unwrap_or_else(|| {
+                    format!(
+                        "scored {:.2}, below the {threshold:.2} threshold",
+                        scores[index]
+                    )
+                });
+                Branch::rejected(label.clone(), reason).with_confidence(scores[index])
+            }
+            (None, false) => Branch::cancelled(
+                label.clone(),
+                format!("still running when {winner_label} cleared the {threshold:.2} threshold"),
+            ),
+        };
+        step.branches.push(branch);
+    }
+
+    let mut winning = finished
+        .into_iter()
+        .nth(winner_idx)
+        .flatten()
+        .expect("the winning candidate always finished");
     winning.push_step(step);
     winning
 }
@@ -241,6 +389,147 @@ mod tests {
     async fn empty_candidates_panics() {
         let candidates: Vec<(String, Arc<dyn Agent<Input = (), Output = ()>>)> = vec![];
         let _ = speculate(candidates, ()).await;
+    }
+
+    // ── speculate_race ───────────────────────────────────────────────────────
+
+    /// Finishes only after a real delay, so a race against an instant
+    /// candidate has a deterministic loser.
+    struct Slow(&'static str, f64);
+
+    #[async_trait]
+    impl Agent for Slow {
+        type Input = ();
+        type Output = &'static str;
+
+        fn name(&self) -> &str {
+            self.0
+        }
+        fn goal(&self) -> &str {
+            "eventually produce a very good answer"
+        }
+
+        async fn run(&self, _input: (), ctx: &mut AgentContext) -> Trace<&'static str> {
+            ctx.record_step().unwrap();
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            let mut t = Trace::new(self.0);
+            t.push_step(Step::named("deliberate").with_confidence(self.1));
+            t
+        }
+    }
+
+    fn branch<'a>(trace: &'a Trace<&'static str>, label: &str) -> &'a trace_lang_core::Branch {
+        trace
+            .all_branches()
+            .into_iter()
+            .find(|b| b.label == label)
+            .expect("every candidate is recorded as a branch")
+    }
+
+    #[tokio::test]
+    async fn a_candidate_over_the_threshold_wins_and_the_rest_are_cancelled() {
+        let candidates: Candidates = vec![
+            (
+                "slow".to_string(),
+                Arc::new(Slow("slow but excellent", 0.99)),
+            ),
+            (
+                "quick".to_string(),
+                Arc::new(Scored("quick and fine", 0.85)),
+            ),
+        ];
+
+        let trace = speculate_race(candidates, (), 0.8).await;
+
+        // The better answer loses on purpose: it had not arrived yet.
+        assert_eq!(trace.value(), Some(&"quick and fine"));
+        assert!(branch(&trace, "quick").is_taken());
+
+        let cancelled = branch(&trace, "slow");
+        assert!(cancelled.is_cancelled());
+        assert!(
+            !cancelled.is_rejected(),
+            "cancelled is not the same as judged and rejected"
+        );
+        assert_eq!(
+            cancelled.confidence, None,
+            "a cancelled candidate never reported a score"
+        );
+    }
+
+    #[tokio::test]
+    async fn when_nothing_clears_the_bar_every_candidate_runs_and_the_best_wins() {
+        let candidates: Candidates = vec![
+            ("weak".to_string(), Arc::new(Scored("weak answer", 0.30))),
+            (
+                "strong".to_string(),
+                Arc::new(Scored("strong answer", 0.70)),
+            ),
+        ];
+
+        // Nothing reaches 0.99, so this degrades to `speculate`'s semantics.
+        let trace = speculate_race(candidates, (), 0.99).await;
+
+        assert_eq!(trace.value(), Some(&"strong answer"));
+        assert!(branch(&trace, "strong").is_taken());
+        assert!(branch(&trace, "weak").is_rejected());
+        assert_eq!(branch(&trace, "weak").confidence, Some(0.30));
+        assert!(trace.all_branches().iter().all(|b| !b.is_cancelled()));
+    }
+
+    #[tokio::test]
+    async fn ties_keep_the_first_candidate_when_nothing_clears_the_bar() {
+        // Same tie-break rule as `speculate` — see `first_max_index`.
+        let candidates: Candidates = vec![
+            ("first".to_string(), Arc::new(Scored("first answer", 0.5))),
+            ("second".to_string(), Arc::new(Scored("second answer", 0.5))),
+        ];
+
+        let trace = speculate_race(candidates, (), 0.9).await;
+        assert_eq!(trace.value(), Some(&"first answer"));
+    }
+
+    #[tokio::test]
+    async fn a_failed_candidate_never_wins_the_race_however_low_the_threshold() {
+        let candidates: Candidates = vec![
+            ("broken".to_string(), Arc::new(AlwaysFails("broken"))),
+            ("ok".to_string(), Arc::new(Scored("ok answer", 0.10))),
+        ];
+
+        let trace = speculate_race(candidates, (), 0.0).await;
+
+        assert_eq!(trace.value(), Some(&"ok answer"));
+        assert!(branch(&trace, "broken").is_rejected());
+    }
+
+    #[tokio::test]
+    async fn a_negative_threshold_is_clamped_so_a_failure_still_cannot_win() {
+        let candidates: Candidates = vec![
+            ("broken".to_string(), Arc::new(AlwaysFails("broken"))),
+            ("ok".to_string(), Arc::new(Scored("ok answer", 0.10))),
+        ];
+
+        let trace = speculate_race(candidates, (), -5.0).await;
+        assert_eq!(trace.value(), Some(&"ok answer"));
+    }
+
+    #[tokio::test]
+    async fn every_candidate_failing_still_returns_a_trace_with_branches() {
+        let candidates: Candidates = vec![
+            ("a".to_string(), Arc::new(AlwaysFails("a"))),
+            ("b".to_string(), Arc::new(AlwaysFails("b"))),
+        ];
+
+        let trace = speculate_race(candidates, (), 0.5).await;
+        assert!(!trace.is_ok());
+        assert_eq!(trace.all_branches().len(), 2);
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "speculate_race requires at least one candidate")]
+    async fn racing_no_candidates_panics() {
+        let candidates: Vec<(String, Arc<dyn Agent<Input = (), Output = ()>>)> = vec![];
+        let _ = speculate_race(candidates, (), 0.5).await;
     }
 
     // ── first_max_index: unit ────────────────────────────────────────────────

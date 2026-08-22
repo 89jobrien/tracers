@@ -11,8 +11,9 @@
 use std::sync::Arc;
 
 use trace_lang_agent::spawn;
+use trace_lang_core::Branch;
 use trace_lang_examples::{Drafter, Editor, fact, heading, print_chain};
-use trace_lang_runtime::{AgentRegistry, join_all, run_with_escalation, speculate};
+use trace_lang_runtime::{AgentRegistry, join_all, run_with_escalation, speculate, speculate_race};
 
 #[tokio::main]
 async fn main() {
@@ -68,23 +69,45 @@ async fn main() {
     // Both agents answer the same question; the winner is chosen by mean
     // step confidence, and the loser is recorded as a rejected `Branch`
     // rather than thrown away.
-    let candidates: Vec<(
-        String,
-        Arc<dyn trace_lang_agent::Agent<Input = String, Output = String>>,
-    )> = vec![
-        ("Drafter".to_string(), Arc::new(Drafter)),
-        ("Editor".to_string(), Arc::new(Editor)),
-    ];
-    let winner = speculate(candidates, source).await;
+    let winner = speculate(candidates(), source.clone()).await;
     fact("winner", winner.value().cloned().unwrap_or_default());
     for branch in winner.all_branches() {
-        fact(
-            &branch.label,
-            format!(
-                "{:?} (confidence {:.2})",
-                branch.outcome,
-                branch.confidence.unwrap_or_default()
-            ),
-        );
+        fact(&branch.label, describe(branch));
+    }
+
+    heading("speculate_race: stop as soon as one is good enough");
+    // `Drafter` scores 0.55 and `Editor` 0.94. A 0.5 bar is cleared by
+    // whichever finishes first, so the other is *cancelled* — never judged,
+    // and recorded as such rather than as "rejected: lower confidence".
+    let raced = speculate_race(candidates(), source.clone(), 0.5).await;
+    fact("winner", raced.value().cloned().unwrap_or_default());
+    for branch in raced.all_branches() {
+        fact(&branch.label, describe(branch));
+    }
+
+    heading("...and with a bar nothing clears, it degrades to speculate");
+    let strict = speculate_race(candidates(), source, 0.99).await;
+    fact("winner", strict.value().cloned().unwrap_or_default());
+    for branch in strict.all_branches() {
+        fact(&branch.label, describe(branch));
+    }
+}
+
+type Candidates = Vec<(
+    String,
+    Arc<dyn trace_lang_agent::Agent<Input = String, Output = String>>,
+)>;
+
+fn candidates() -> Candidates {
+    vec![
+        ("Drafter".to_string(), Arc::new(Drafter)),
+        ("Editor".to_string(), Arc::new(Editor)),
+    ]
+}
+
+fn describe(branch: &Branch) -> String {
+    match branch.confidence {
+        Some(c) => format!("{:?} (confidence {c:.2})", branch.outcome),
+        None => format!("{:?}", branch.outcome),
     }
 }

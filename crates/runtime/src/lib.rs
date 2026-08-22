@@ -14,12 +14,17 @@
 //! - [`speculate()`] — runs several *different* candidate agents
 //!   concurrently over the same input and picks a winner by confidence,
 //!   recording the losers as rejected [`trace_lang_core::Branch`]es
+//! - [`speculate_race`] — the same fan-out, but stops as soon as one
+//!   candidate clears a confidence threshold and cancels the rest, so the
+//!   accuracy/latency/cost trade is a parameter rather than a fork in the
+//!   API
 //!
 //! # Known limitation
 //!
-//! [`join_all`] and [`speculate()`] use `futures::future::join_all`,
-//! which polls concurrently on the current task rather than
-//! distributing across OS threads. True multi-threaded parallelism
+//! [`join_all`] and [`speculate()`] use `futures::future::join_all` (and
+//! [`speculate_race`] a `FuturesUnordered`), all of which poll
+//! concurrently on the current task rather than distributing across OS
+//! threads. True multi-threaded parallelism
 //! (via `tokio::spawn` and `'static` agents) and a shared step-budget
 //! that spans concurrent branches are both tracked as future work —
 //! see this repo's `HANDOFF` for the open items.
@@ -39,4 +44,4 @@ pub mod fixtures;
 pub use execute::{RunOutcome, run_with_escalation};
 pub use join::join_all;
 pub use registry::AgentRegistry;
-pub use speculate::speculate;
+pub use speculate::{speculate, speculate_race};
