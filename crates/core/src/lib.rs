@@ -28,12 +28,14 @@
 
 pub mod cost;
 pub mod error;
+pub mod graph;
 pub mod span;
 pub mod step;
 pub mod trace;
 
 pub use cost::StepCost;
 pub use error::TraceErr;
+pub use graph::{TraceGraph, TraceNode};
 pub use span::Span;
 pub use step::{Branch, BranchOutcome, Step, StepOutcome};
 pub use trace::{Trace, TraceRef};
