@@ -330,6 +330,44 @@ mod tests {
     }
 
     #[test]
+    fn a_float_field_survives_a_checkpoint_round_trip_bit_for_bit() {
+        // Regression guard for serde_json's `float_roundtrip` feature, which
+        // the workspace manifest enables and which is off by default.
+        // Without it these two values each come back one ULP off, so a
+        // checkpoint drifts slightly on every save/load cycle — a trace is
+        // supposed to be a record, not an approximation of one.
+        //
+        // Found by the `trace_roundtrip` fuzz target within seconds of first
+        // running it, not by inspection.
+        let confidence = 1.5626343493868385e-307_f64;
+        let dollars = 5.986173235317172e-212_f64;
+
+        let mut t = Trace::new(1);
+        t.push_step(Step::named("scored").with_confidence(confidence));
+        t.push_step(Step::named("priced").with_cost(StepCost::new(1, 1).with_dollars(dollars)));
+
+        let json = serde_json::to_string(&t).expect("a trace serializes");
+        let restored: Trace<i32> = serde_json::from_str(&json).expect("and deserializes");
+
+        assert_eq!(
+            restored.causal_chain()[0].confidence.map(f64::to_bits),
+            Some(confidence.to_bits()),
+        );
+        assert_eq!(
+            restored.causal_chain()[1]
+                .cost
+                .and_then(|c| c.dollars)
+                .map(f64::to_bits),
+            Some(dollars.to_bits()),
+        );
+        assert_eq!(
+            json,
+            serde_json::to_string(&restored).expect("re-serializes"),
+            "a checkpoint must be byte-identical after a round trip"
+        );
+    }
+
+    #[test]
     fn from_trace_for_result_maps_ok_and_err() {
         let ok: Result<i32, TraceErr> = Trace::new(5).into();
         assert_eq!(ok, Ok(5));

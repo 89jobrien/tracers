@@ -25,11 +25,17 @@
 //! cargo run -p trace-lang-examples --example trace_basics
 //! ```
 
-// TODO: add benches/ (criterion) and fuzz/ (cargo-fuzz) — `taskit bench` and
-// `taskit fuzz` are both available subcommands already, currently unused.
-// A good fuzz target: Trace<T>/Task (de)serialization round-tripping, given
-// CLAUDE.md's "all types are Serialize + Deserialize — a compile-time
-// constraint" invariant.
+//! # Benchmarks and fuzzing
+//!
+//! ```bash
+//! cargo bench -p trace-lang-core          # criterion, crates/core/benches/
+//! cargo +nightly fuzz run trace_roundtrip # cargo-fuzz, workspace fuzz/
+//! ```
+//!
+//! The fuzz targets attack the "all types are `Serialize + Deserialize`"
+//! invariant from both ends: that a built value survives a round trip
+//! byte-for-byte, and that arbitrary bytes produce a `TraceErr` rather than
+//! a panic.
 
 pub mod approval;
 pub mod cost;

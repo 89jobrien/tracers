@@ -10,6 +10,9 @@ members = [
     "examples",
     "xtask",
 ]
+# cargo-fuzz builds with nightly `-Z` flags; keep it out of the main
+# workspace so `cargo build --workspace` on stable never sees it.
+exclude = ["fuzz"]
 
 [workspace.package]
 # TODO: pin `rust-version` (MSRV) here and add a `taskit inspect`/CI check
@@ -31,7 +34,13 @@ categories  = ["development-tools", "asynchronous"]
 
 [workspace.dependencies]
 serde       = { version = "1.0.210", features = ["derive"] }
-serde_json  = "1.0.128"
+# `float_roundtrip` is not optional here despite being off by default:
+# without it serde_json's fast float parser loses an ULP on some
+# extreme-exponent f64s, so a `confidence` or `dollars` value drifts a
+# little on every checkpoint save/load cycle. Found by the
+# `trace_roundtrip` fuzz target; guarded by a unit test in
+# crates/core/src/trace.rs.
+serde_json  = { version = "1.0.128", features = ["float_roundtrip"] }
 uuid        = { version = "=1.10.0", features = ["v4", "serde"] }
 chrono      = { version = "=0.4.38", features = ["serde"] }
 thiserror   = "=1.0.64"

@@ -1,0 +1,37 @@
+# cargo-fuzz targets for trace::
+#
+# Deliberately its own workspace (`[workspace]` below, `exclude` in the root
+# manifest): cargo-fuzz builds with nightly and `-Z` flags that the main
+# workspace neither needs nor should inherit.
+[package]
+name    = "trace-lang-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary     = { version = "1", features = ["derive"] }
+serde_json    = { version = "1", features = ["float_roundtrip"] }
+uuid          = { version = "1", features = ["v4", "serde"] }
+trace-lang-core = { path = "../crates/core" }
+trace-lang-task = { path = "../crates/task" }
+
+[[bin]]
+name  = "trace_roundtrip"
+path  = "fuzz_targets/trace_roundtrip.rs"
+test  = false
+doc   = false
+bench = false
+
+[[bin]]
+name  = "checkpoint_parse"
+path  = "fuzz_targets/checkpoint_parse.rs"
+test  = false
+doc   = false
+bench = false
+
+[workspace]

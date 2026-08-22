@@ -19,4 +19,12 @@ thiserror  = { workspace = true }
 miette     = { version = "7", features = ["fancy"] }
 
 [dev-dependencies]
+# `cargo_bench_support` only — criterion's default features add plotters
+# and rayon, which this crate's benches do not use and cargo-deny would
+# have to vet for no benefit.
+criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
 proptest = { workspace = true }
+
+[[bench]]
+name    = "trace"
+harness = false
