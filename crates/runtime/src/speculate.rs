@@ -84,7 +84,7 @@ where
         }
     });
 
-    let results: Vec<(String, Trace<O>)> = futures::future::join_all(futures).await;
+    let mut results: Vec<(String, Trace<O>)> = futures::future::join_all(futures).await;
 
     let scores: Vec<f64> = results
         .iter()
@@ -107,11 +107,10 @@ where
         step.branches.push(branch.with_confidence(conf));
     }
 
-    let mut winning = results
-        .into_iter()
-        .nth(winner_idx)
-        .map(|(_, t)| t)
-        .expect("winner_idx is always within results' bounds");
+    // `first_max_index` guarantees `winner_idx < results.len()`, and order
+    // no longer matters here — `swap_remove` takes the winner without the
+    // iterator walk or an `expect` in library code.
+    let (_, mut winning) = results.swap_remove(winner_idx);
     winning.push_step(step);
     winning
 }

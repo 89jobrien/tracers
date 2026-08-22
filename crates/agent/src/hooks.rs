@@ -58,4 +58,17 @@ mod tests {
         assert!(!action.is_none());
         assert_eq!(action.delegate_target(), None);
     }
+
+    #[test]
+    fn escalation_action_serde_round_trips_every_variant() {
+        for action in [
+            EscalationAction::None,
+            EscalationAction::Delegate("Senior".to_string()),
+            EscalationAction::Emit(TraceErr::other("abort")),
+        ] {
+            let json = serde_json::to_string(&action).unwrap();
+            let back: EscalationAction = serde_json::from_str(&json).unwrap();
+            assert_eq!(back, action);
+        }
+    }
 }

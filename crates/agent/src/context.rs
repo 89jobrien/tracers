@@ -109,6 +109,18 @@ mod tests {
     }
 
     #[test]
+    fn agent_context_serde_round_trips() {
+        let mut ctx = AgentContext::new("probe", Some(3));
+        ctx.record_step().unwrap();
+        let json = serde_json::to_string(&ctx).unwrap();
+        let back: AgentContext = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.agent_name, ctx.agent_name);
+        assert_eq!(back.steps_taken, ctx.steps_taken);
+        assert_eq!(back.budget, ctx.budget);
+        assert_eq!(back.delegation_chain, ctx.delegation_chain);
+    }
+
+    #[test]
     fn extend_chain_appends_without_mutating_the_original() {
         let ctx = AgentContext::new("root", None);
         let extended = ctx.extend_chain("child");
