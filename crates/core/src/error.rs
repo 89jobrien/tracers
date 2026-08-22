@@ -68,6 +68,16 @@ pub enum TraceErr {
     )]
     Timeout { duration: Duration },
 
+    /// A human rejected an [`crate::ApprovalRequest`] the pipeline paused on.
+    #[error("approval denied by {by}: {reason}")]
+    #[diagnostic(
+        code(trace::approval_denied),
+        help(
+            "a human declined to let this work continue — this is a decision, not a defect. Resume is not retryable: raise a fresh request if the situation changed"
+        )
+    )]
+    ApprovalDenied { by: String, reason: String },
+
     /// A step's declared pre- or postcondition was violated — the step
     /// technically succeeded but produced something the contract forbids.
     #[error("contract violated: {message}")]
@@ -111,6 +121,14 @@ impl TraceErr {
         Self::ToolFailed {
             tool: tool.into(),
             message: message.into(),
+        }
+    }
+
+    /// Build an `ApprovalDenied` error from the decider and their reason.
+    pub fn approval_denied(by: impl Into<String>, reason: impl Into<String>) -> Self {
+        Self::ApprovalDenied {
+            by: by.into(),
+            reason: reason.into(),
         }
     }
 

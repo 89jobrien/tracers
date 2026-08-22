@@ -9,11 +9,25 @@ use trace_lang_core::Trace;
 pub struct RunOutcome<O> {
     pub trace: Trace<O>,
     pub context: AgentContext,
-    /// `Some` if the run stopped with an escalation still pending —
-    /// either `max_hops` was reached, or the escalation named an agent
-    /// the registry doesn't recognize. `None` means the final agent in
-    /// the chain produced no further escalation.
+    /// `Some` if the run stopped with an escalation still pending:
+    /// `max_hops` was reached, the escalation named an agent the registry
+    /// doesn't recognize, or the escalation is one no agent can discharge
+    /// (`RequireApproval`, `Emit`). `None` means the final agent in the
+    /// chain produced no further escalation.
     pub unresolved: Option<EscalationAction>,
+}
+
+impl<O> RunOutcome<O> {
+    /// The question this run stopped to ask a human, if it stopped on a
+    /// `RequireApproval` escalation.
+    ///
+    /// This is the handoff point between `trace-lang-runtime` and
+    /// `trace-lang-task`: park the work with
+    /// `TaskRegistry::pause(id, request, store)` and resume it when a
+    /// decision arrives.
+    pub fn approval_request(&self) -> Option<&trace_lang_core::ApprovalRequest> {
+        self.unresolved.as_ref().and_then(|e| e.approval_request())
+    }
 }
 
 /// Run `agent`, and if its lifecycle hooks recommend delegating to
@@ -21,6 +35,12 @@ pub struct RunOutcome<O> {
 /// going — up to `max_hops` handoffs — until a run produces no further
 /// escalation, the registry can't resolve the named target, or the hop
 /// limit is reached.
+///
+/// Only `Delegate` is resolvable here. An escalation that needs a human
+/// (`RequireApproval`) or that aborts (`Emit`) comes back in
+/// [`RunOutcome::unresolved`] for the caller to act on — the runtime
+/// cannot discharge either, and dropping them would silently lose the
+/// escalation the hook asked for.
 ///
 /// `input` must be `Clone`: each hop re-runs the *same* task against a
 /// new agent. That is the point of escalation — retry the original
@@ -93,11 +113,12 @@ where
     loop {
         let target_name = match &escalation {
             EscalationAction::Delegate(name) => name.clone(),
-            _ => {
+            other => {
+                let unresolved = other.needs_a_human().then(|| escalation.clone());
                 return RunOutcome {
                     trace,
                     context,
-                    unresolved: None,
+                    unresolved,
                 };
             }
         };
@@ -212,6 +233,112 @@ mod tests {
             Some(EscalationAction::Delegate("Nobody".to_string()))
         );
         assert_eq!(outcome.context.delegation_chain, vec!["DeadEnd"]);
+    }
+
+    /// Stops mid-run to ask a human — an escalation no registry can
+    /// resolve, however many agents it holds.
+    struct NeedsApproval;
+
+    #[async_trait]
+    impl Agent for NeedsApproval {
+        type Input = ();
+        type Output = ();
+
+        fn name(&self) -> &str {
+            "NeedsApproval"
+        }
+        fn goal(&self) -> &str {
+            "refuse to act without a human decision"
+        }
+
+        async fn run(&self, _input: (), ctx: &mut AgentContext) -> Trace<()> {
+            ctx.record_step().unwrap();
+            Trace::failed(TraceErr::other("this needs sign-off"))
+        }
+
+        fn on_step_failure(&self) -> EscalationAction {
+            let partial: Trace<()> = Trace::failed(TraceErr::other("this needs sign-off"));
+            EscalationAction::RequireApproval(trace_lang_core::ApprovalRequest::new(
+                "approve this?",
+                partial.trace_ref(),
+            ))
+        }
+    }
+
+    /// Aborts outright rather than escalating to anyone.
+    struct Aborts;
+
+    #[async_trait]
+    impl Agent for Aborts {
+        type Input = ();
+        type Output = ();
+
+        fn name(&self) -> &str {
+            "Aborts"
+        }
+        fn goal(&self) -> &str {
+            "fail terminally without delegating"
+        }
+
+        async fn run(&self, _input: (), ctx: &mut AgentContext) -> Trace<()> {
+            ctx.record_step().unwrap();
+            Trace::failed(TraceErr::other("unrecoverable"))
+        }
+
+        fn on_step_failure(&self) -> EscalationAction {
+            EscalationAction::Emit(TraceErr::other("giving up"))
+        }
+    }
+
+    #[tokio::test]
+    async fn an_approval_escalation_comes_back_unresolved_for_the_caller_to_park() {
+        let mut registry: AgentRegistry<(), ()> = AgentRegistry::new();
+        registry.register(Arc::new(Available));
+
+        let outcome = run_with_escalation(&NeedsApproval, (), &registry, 10).await;
+
+        // No agent can discharge this, so the runtime must hand it back
+        // rather than reporting the run as cleanly finished.
+        let request = outcome
+            .approval_request()
+            .expect("the approval request must survive back to the caller");
+        assert_eq!(request.question, "approve this?");
+        assert_eq!(outcome.context.delegation_chain, vec!["NeedsApproval"]);
+    }
+
+    #[tokio::test]
+    async fn an_emit_escalation_comes_back_unresolved_rather_than_being_dropped() {
+        let registry: AgentRegistry<(), ()> = AgentRegistry::new();
+
+        let outcome = run_with_escalation(&Aborts, (), &registry, 10).await;
+
+        assert_eq!(
+            outcome.unresolved,
+            Some(EscalationAction::Emit(TraceErr::other("giving up")))
+        );
+        assert!(outcome.approval_request().is_none());
+    }
+
+    /// A registered agent that would happily run, to prove the approval
+    /// path is not merely "the registry was empty".
+    struct Available;
+
+    #[async_trait]
+    impl Agent for Available {
+        type Input = ();
+        type Output = ();
+
+        fn name(&self) -> &str {
+            "Anyone"
+        }
+        fn goal(&self) -> &str {
+            "be available, and still not be a substitute for a human"
+        }
+
+        async fn run(&self, _input: (), ctx: &mut AgentContext) -> Trace<()> {
+            ctx.record_step().unwrap();
+            Trace::new(())
+        }
     }
 
     /// A trivial agent that always succeeds with no escalation.

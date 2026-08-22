@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use trace_lang_core::{TraceErr, TraceRef};
+use trace_lang_core::{ApprovalDecision, ApprovalRequest, TraceErr, TraceRef};
 use uuid::Uuid;
 
 /// A serializable, dependency-aware unit of work.
@@ -39,10 +39,13 @@ pub enum TaskStatus {
     Done(TraceRef),
     /// Failed. Carries the error and a pointer to the partial trace.
     Failed { error: TraceErr, trace: TraceRef },
-    // TODO: add `Paused(ApprovalRequest)` for human-in-the-loop traces (see
-    // docs/ideas/FEATURES.md #5) — pairs with a new
-    // `EscalationAction::RequireApproval` variant and a `resume()` fn;
-    // builds directly on the checkpoint/resume infra TaskRegistry already has.
+    /// Stopped, waiting on a human decision. Not a delegation to a
+    /// "reviewer agent" — nothing runs until an [`ApprovalDecision`]
+    /// arrives through some external channel, which may be days later.
+    /// The request carries the partial trace that reached the pause, so
+    /// this state links back to its execution exactly like `Done` and
+    /// `Failed` do.
+    Paused(ApprovalRequest),
 }
 
 /// Task scheduling priority.
@@ -146,6 +149,52 @@ impl Task {
         self.updated_at = Utc::now();
     }
 
+    /// Stop and wait for a human, carrying the question and the partial
+    /// trace that led to it.
+    ///
+    /// Unlike `complete` and `fail`, this *keeps* `assigned_to`: the work
+    /// is suspended, not finished, and the agent that raised the question
+    /// is still the one that owns it.
+    pub fn pause(&mut self, request: ApprovalRequest) {
+        self.status = TaskStatus::Paused(request);
+        self.updated_at = Utc::now();
+    }
+
+    /// Apply a human's decision to a paused task.
+    ///
+    /// An approval returns the task to `Pending` — schedulable again, with
+    /// `assigned_to` intact so a scheduler can hand it back to the agent
+    /// that asked. A rejection is terminal: the task transitions to
+    /// `Failed` with [`TraceErr::ApprovalDenied`], pointing at the same
+    /// partial trace the approver saw.
+    ///
+    /// Errors if the task is not paused — resuming something that never
+    /// stopped would silently discard whatever state it *is* in.
+    pub fn resume(&mut self, decision: ApprovalDecision) -> Result<(), TraceErr> {
+        let TaskStatus::Paused(request) = &self.status else {
+            return Err(TraceErr::other(format!(
+                "cannot resume task {}: it is not paused",
+                self.id
+            )));
+        };
+
+        match decision {
+            ApprovalDecision::Approved { .. } => {
+                self.status = TaskStatus::Pending;
+            }
+            ApprovalDecision::Rejected { by, reason } => {
+                let trace = request.trace.clone();
+                self.status = TaskStatus::Failed {
+                    error: TraceErr::approval_denied(by, reason),
+                    trace,
+                };
+                self.assigned_to = None;
+            }
+        }
+        self.updated_at = Utc::now();
+        Ok(())
+    }
+
     // ── Status helpers ────────────────────────────────────────────────────────
 
     /// True if the task's status is `Pending`.
@@ -161,6 +210,19 @@ impl Task {
     /// True if the task's status is `Failed`.
     pub fn is_failed(&self) -> bool {
         matches!(self.status, TaskStatus::Failed { .. })
+    }
+
+    /// True if the task is stopped waiting on a human.
+    pub fn is_paused(&self) -> bool {
+        matches!(self.status, TaskStatus::Paused(_))
+    }
+
+    /// The question this task is waiting on, if it is paused.
+    pub fn approval_request(&self) -> Option<&ApprovalRequest> {
+        match &self.status {
+            TaskStatus::Paused(request) => Some(request),
+            _ => None,
+        }
     }
 }
 
@@ -209,6 +271,77 @@ mod tests {
         t.fail(TraceErr::other("boom"), trace_ref);
         assert!(t.is_failed());
         assert!(t.assigned_to.is_none());
+    }
+
+    fn paused_task() -> Task {
+        let mut task = Task::new("refund");
+        task.assign_to("Refunder");
+        task.pause(ApprovalRequest::new(
+            "approve this refund?",
+            TraceRef(Uuid::new_v4()),
+        ));
+        task
+    }
+
+    #[test]
+    fn pause_keeps_the_assignee_unlike_complete_and_fail() {
+        let task = paused_task();
+        assert!(task.is_paused());
+        assert_eq!(task.assigned_to.as_deref(), Some("Refunder"));
+        assert_eq!(
+            task.approval_request().map(|r| r.question.as_str()),
+            Some("approve this refund?")
+        );
+    }
+
+    #[test]
+    fn resuming_with_an_approval_makes_the_task_schedulable_again() {
+        let mut task = paused_task();
+        task.resume(ApprovalDecision::approve("joe")).unwrap();
+
+        assert!(task.is_pending());
+        assert!(!task.is_paused());
+        // The agent that asked keeps the task, so a scheduler can hand it back.
+        assert_eq!(task.assigned_to.as_deref(), Some("Refunder"));
+    }
+
+    #[test]
+    fn resuming_with_a_rejection_fails_the_task_against_the_reviewed_trace() {
+        let mut task = paused_task();
+        let reviewed = task.approval_request().unwrap().trace.clone();
+
+        task.resume(ApprovalDecision::reject("joe", "over the limit"))
+            .unwrap();
+
+        assert!(task.is_failed());
+        assert!(task.assigned_to.is_none());
+        assert_eq!(
+            task.status,
+            TaskStatus::Failed {
+                error: TraceErr::approval_denied("joe", "over the limit"),
+                trace: reviewed,
+            }
+        );
+    }
+
+    #[test]
+    fn resuming_a_task_that_was_never_paused_is_an_error() {
+        let mut task = Task::new("x");
+        assert!(task.resume(ApprovalDecision::approve("joe")).is_err());
+        // ... and leaves the task exactly as it was.
+        assert!(task.is_pending());
+    }
+
+    #[test]
+    fn a_paused_task_round_trips_through_json() {
+        // Pausing is only useful if the decision can arrive after the
+        // process that asked has exited.
+        let task = paused_task();
+        let json = serde_json::to_string(&task).expect("serializes");
+        let restored: Task = serde_json::from_str(&json).expect("deserializes");
+
+        assert!(restored.is_paused());
+        assert_eq!(restored.status, task.status);
     }
 
     #[test]

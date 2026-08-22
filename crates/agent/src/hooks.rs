@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use trace_lang_core::TraceErr;
+use trace_lang_core::{ApprovalRequest, TraceErr};
 
 /// The declarative outcome of a lifecycle hook
 /// (`on_low_confidence`, `on_budget_exceeded`, `on_step_failure`).
@@ -17,6 +17,11 @@ pub enum EscalationAction {
     Delegate(String),
     /// Abort with the given error rather than escalating further.
     Emit(TraceErr),
+    /// Stop and wait for a human. Unlike `Delegate`, no agent can
+    /// discharge this — the caller must park the work (typically as
+    /// `TaskStatus::Paused` in a checkpointed `TaskRegistry`) and resume
+    /// it once a decision arrives through an external channel.
+    RequireApproval(ApprovalRequest),
 }
 
 impl EscalationAction {
@@ -31,6 +36,24 @@ impl EscalationAction {
             EscalationAction::Delegate(name) => Some(name),
             _ => None,
         }
+    }
+
+    /// The question awaiting a human, if this action is `RequireApproval`.
+    pub fn approval_request(&self) -> Option<&ApprovalRequest> {
+        match self {
+            EscalationAction::RequireApproval(request) => Some(request),
+            _ => None,
+        }
+    }
+
+    /// True if no agent in any registry can discharge this action — it
+    /// needs a human, or it is a terminal error. `run_with_escalation`
+    /// uses this to decide what to hand back as `unresolved`.
+    pub fn needs_a_human(&self) -> bool {
+        matches!(
+            self,
+            EscalationAction::RequireApproval(_) | EscalationAction::Emit(_)
+        )
     }
 }
 
@@ -57,5 +80,24 @@ mod tests {
         let action = EscalationAction::Emit(TraceErr::other("abort"));
         assert!(!action.is_none());
         assert_eq!(action.delegate_target(), None);
+        assert!(action.needs_a_human());
+    }
+
+    #[test]
+    fn require_approval_exposes_its_request_and_no_delegate_target() {
+        let partial = trace_lang_core::Trace::new("draft");
+        let request = ApprovalRequest::new("ship it?", partial.trace_ref());
+        let action = EscalationAction::RequireApproval(request.clone());
+
+        assert!(!action.is_none());
+        assert_eq!(action.delegate_target(), None);
+        assert_eq!(action.approval_request(), Some(&request));
+        assert!(action.needs_a_human());
+    }
+
+    #[test]
+    fn delegation_and_no_escalation_do_not_need_a_human() {
+        assert!(!EscalationAction::None.needs_a_human());
+        assert!(!EscalationAction::Delegate("Senior".to_string()).needs_a_human());
     }
 }

@@ -2,7 +2,7 @@ use crate::checkpoint::CheckpointStore;
 use crate::task::Task;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use trace_lang_core::TraceErr;
+use trace_lang_core::{ApprovalDecision, ApprovalRequest, TraceErr};
 use uuid::Uuid;
 
 /// The runtime task graph.
@@ -62,6 +62,44 @@ impl TaskRegistry {
         self.save(store)
     }
 
+    /// Stop a task to wait on a human decision, and persist a checkpoint.
+    ///
+    /// The checkpoint is the whole point: the pipeline can exit and the
+    /// decision can arrive days later against a registry restored from
+    /// disk. Errors if `id` is unknown, rather than silently checkpointing
+    /// a pause that never happened.
+    pub fn pause(
+        &mut self,
+        id: Uuid,
+        request: ApprovalRequest,
+        store: &impl CheckpointStore,
+    ) -> Result<(), TraceErr> {
+        let task = self
+            .tasks
+            .get_mut(&id)
+            .ok_or_else(|| TraceErr::other(format!("cannot pause unknown task {id}")))?;
+        task.pause(request);
+        self.save(store)
+    }
+
+    /// Apply a human's decision to a paused task and persist a checkpoint.
+    ///
+    /// Errors if `id` is unknown or the task is not paused; in neither case
+    /// is a checkpoint written.
+    pub fn resume(
+        &mut self,
+        id: Uuid,
+        decision: ApprovalDecision,
+        store: &impl CheckpointStore,
+    ) -> Result<(), TraceErr> {
+        let task = self
+            .tasks
+            .get_mut(&id)
+            .ok_or_else(|| TraceErr::other(format!("cannot resume unknown task {id}")))?;
+        task.resume(decision)?;
+        self.save(store)
+    }
+
     // ── Querying ──────────────────────────────────────────────────────────────
 
     /// Tasks whose dependencies are all `Done` and whose status is `Pending`.
@@ -93,6 +131,12 @@ impl TaskRegistry {
     /// All tasks with status `Failed`.
     pub fn failed(&self) -> Vec<&Task> {
         self.tasks.values().filter(|t| t.is_failed()).collect()
+    }
+
+    /// All tasks stopped waiting on a human decision — the inbox an
+    /// approval channel (CLI, Slack, web form) reads from.
+    pub fn paused(&self) -> Vec<&Task> {
+        self.tasks.values().filter(|t| t.is_paused()).collect()
     }
 
     /// Total number of tasks in the registry.
@@ -142,6 +186,39 @@ impl From<Vec<Task>> for TaskRegistry {
 mod tests {
     use super::*;
     use crate::task::Priority;
+    use std::cell::RefCell;
+    use trace_lang_core::TraceRef;
+
+    /// The smallest possible `CheckpointStore` — enough to assert that a
+    /// transition checkpointed, without touching the filesystem.
+    #[derive(Default)]
+    struct MemoryStore {
+        blob: RefCell<Option<String>>,
+    }
+
+    impl MemoryStore {
+        fn saved(&self) -> bool {
+            self.blob.borrow().is_some()
+        }
+    }
+
+    impl CheckpointStore for MemoryStore {
+        fn load(&self) -> Result<String, TraceErr> {
+            self.blob
+                .borrow()
+                .clone()
+                .ok_or_else(|| TraceErr::other("nothing checkpointed yet"))
+        }
+
+        fn save(&self, data: &str) -> Result<(), TraceErr> {
+            *self.blob.borrow_mut() = Some(data.to_string());
+            Ok(())
+        }
+    }
+
+    fn a_request() -> ApprovalRequest {
+        ApprovalRequest::new("proceed?", TraceRef(Uuid::new_v4()))
+    }
 
     #[test]
     fn task_with_no_dependencies_is_ready_when_pending() {
@@ -216,6 +293,86 @@ mod tests {
         assert_eq!(registry.done().len(), 1);
         assert_eq!(registry.failed().len(), 1);
         assert_eq!(registry.total(), 3);
+    }
+
+    #[test]
+    fn a_paused_task_leaves_the_ready_queue_and_joins_the_approval_inbox() {
+        let store = MemoryStore::default();
+        let mut registry = TaskRegistry::from(vec![Task::new("refund")]);
+        let id = registry.pending()[0].id;
+        assert_eq!(registry.ready_tasks().len(), 1);
+
+        registry.pause(id, a_request(), &store).unwrap();
+
+        assert!(registry.ready_tasks().is_empty());
+        assert_eq!(registry.paused().len(), 1);
+        assert!(store.saved(), "pausing must checkpoint");
+    }
+
+    #[test]
+    fn approving_returns_the_task_to_the_ready_queue() {
+        let store = MemoryStore::default();
+        let mut registry = TaskRegistry::from(vec![Task::new("refund")]);
+        let id = registry.pending()[0].id;
+        registry.pause(id, a_request(), &store).unwrap();
+
+        registry
+            .resume(id, ApprovalDecision::approve("joe"), &store)
+            .unwrap();
+
+        assert!(registry.paused().is_empty());
+        assert_eq!(registry.ready_tasks().len(), 1);
+    }
+
+    #[test]
+    fn rejecting_fails_the_task_and_unblocks_nothing() {
+        let store = MemoryStore::default();
+        let blocker = Task::new("refund");
+        let blocker_id = blocker.id;
+        let dependent = Task::new("notify customer").depends_on(blocker_id);
+        let mut registry = TaskRegistry::from(vec![blocker, dependent]);
+        registry.pause(blocker_id, a_request(), &store).unwrap();
+
+        registry
+            .resume(
+                blocker_id,
+                ApprovalDecision::reject("joe", "too large"),
+                &store,
+            )
+            .unwrap();
+
+        assert_eq!(registry.failed().len(), 1);
+        // A rejected dependency is not a satisfied one.
+        assert!(registry.ready_tasks().is_empty());
+    }
+
+    #[test]
+    fn pausing_or_resuming_an_unknown_task_errors_without_checkpointing() {
+        let store = MemoryStore::default();
+        let mut registry = TaskRegistry::new();
+        let missing = Uuid::new_v4();
+
+        assert!(registry.pause(missing, a_request(), &store).is_err());
+        assert!(
+            registry
+                .resume(missing, ApprovalDecision::approve("joe"), &store)
+                .is_err()
+        );
+        assert!(!store.saved());
+    }
+
+    #[test]
+    fn resuming_a_task_that_is_not_paused_errors_without_checkpointing() {
+        let store = MemoryStore::default();
+        let mut registry = TaskRegistry::from(vec![Task::new("running")]);
+        let id = registry.pending()[0].id;
+
+        assert!(
+            registry
+                .resume(id, ApprovalDecision::approve("joe"), &store)
+                .is_err()
+        );
+        assert!(!store.saved());
     }
 
     proptest::proptest! {

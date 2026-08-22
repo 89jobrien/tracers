@@ -26,6 +26,7 @@
 // CLAUDE.md's "all types are Serialize + Deserialize — a compile-time
 // constraint" invariant.
 
+pub mod approval;
 pub mod cost;
 pub mod error;
 pub mod graph;
@@ -33,6 +34,7 @@ pub mod span;
 pub mod step;
 pub mod trace;
 
+pub use approval::{ApprovalDecision, ApprovalRequest};
 pub use cost::StepCost;
 pub use error::TraceErr;
 pub use graph::{TraceGraph, TraceNode};
