@@ -1,0 +1,17 @@
+[package]
+name = "tracers-smoke"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+# Standalone package — opts out of the parent workspace on purpose so the
+# smoke driver can live inside .claude/skills/ without being a member.
+[workspace]
+
+[dependencies]
+trace-lang-core = { path = "../../../../crates/core" }
+trace-lang-task = { path = "../../../../crates/task" }
+trace-lang-agent = { path = "../../../../crates/agent" }
+trace-lang-runtime = { path = "../../../../crates/runtime" }
+async-trait = "0.1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
