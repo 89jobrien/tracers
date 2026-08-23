@@ -1,16 +1,11 @@
 project: tracers
 id: tracers
-updated: '2026-08-23'
+updated: 2026-08-23
 items: []
 log:
 - date: '20260823.001'
   summary: 'clean state: all tests pass (10+ test suites), v0.2.2 release complete, synced develop into main'
-  commits:
-  - 1be238b flow: sync main into develop
-  - 6cbf02a flow: finish release into main
-  - dfd6064 flow: stage staging into release
-  - c6f106c flow: promote develop into staging
-  - 789d205 chore(release): v0.2.2
+  commits: []
 - date: '20260819.002938'
   summary: done=18 running=0 pending=0 blocked=0
   commits: []
