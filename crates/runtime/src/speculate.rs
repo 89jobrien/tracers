@@ -1,3 +1,5 @@
+//! Runs candidate agents concurrently and records confidence-based selection.
+
 use serde::Serialize;
 use std::sync::Arc;
 use trace_lang_agent::{Agent, spawn};

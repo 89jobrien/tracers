@@ -12,7 +12,7 @@ Agent context for working in this repository.
 
 ## crate map
 
-```
+```text
 crates/
   core/    — Trace<T>, Step, Span, Branch, TraceErr
   task/    — Task, TaskStatus, Priority, TaskRegistry

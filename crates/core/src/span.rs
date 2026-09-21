@@ -1,7 +1,9 @@
+//! Measures elapsed time for named execution regions.
+
 use std::time::{Duration, Instant};
 
-/// RAII-style timing span. Timing begins on construction and is captured
-/// on `finish()` or `Drop`. Mirrors the `agent_trace` crate's span pattern.
+/// Timing span that starts on construction and reports elapsed time through
+/// [`Span::elapsed`] or [`Span::finish`].
 ///
 /// ```rust
 /// use trace_lang_core::Span;

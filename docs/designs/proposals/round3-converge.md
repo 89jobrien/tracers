@@ -8,33 +8,33 @@ depends_on: []
 source: docs/ideas/FEATURES.md and conversation rounds 2-6
 ---
 
-# converge() — consensus across independent agents
+## converge() — consensus across independent agents
 
-## Problem
+### Problem
 
 speculate() picks a best-of-N winner; nothing measures agreement when running the *same* agent multiple times on the same input.
 
-## Approach
+### Approach
 
 Run the same agent N times concurrently, tally identical outputs, return majority value's trace plus the full agreement breakdown.
 
-## API sketch
+### API sketch
 
 `struct ConsensusResult<O: PartialEq> { agreement: HashMap<O, usize>, majority: Option<O>, unanimous: bool }`; `async fn converge<I, O>(agent: &dyn Agent<Input=I,Output=O>, input: I, runs: usize) -> (Trace<O>, ConsensusResult<O>) where O: Eq + Hash`
 
-## Integration
+### Integration
 
 Same futures::future::join_all pattern already shipped in tracers-runtime's join_all and speculate — confirmed real in crates/runtime/src/join.rs and speculate.rs.
 
-## Verification notes
+### Verification notes
 
 Confirmed the concurrent-fan-out mechanics this depends on are real, tested, and directly reusable.
 
-## Notes
+### Notes
 
 Needs Eq + Hash on O — free-text outputs rarely produce byte-identical results even from consistent judgment; may need a semantic-similarity variant for text outputs eventually, out of scope for v1.
 
-## Prior art
+### Prior art
 
 - **Self-Consistency Improves Chain of Thought Reasoning in Language Models** (Wang, Wei, Schuurmans, Le, Chi, Narang, Chowdhery, Zhou, arXiv:2203.11171, 2022) — the foundational paper this proposal's core mechanism is based on: sample multiple times, take majority vote. Real, well-established backing for the basic idea.
 - **SelfCheckGPT: Zero-Resource Black-Box Hallucination Detection** (Manakul, Liusie, Gales, arXiv:2303.08896, 2023) — uses divergence across repeated samples as a hallucination signal with no external ground truth needed, corroborating agreement-as-signal without waiting for delayed ground truth.

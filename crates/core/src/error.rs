@@ -1,3 +1,5 @@
+//! Defines serializable trace failures with structured diagnostics.
+
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;

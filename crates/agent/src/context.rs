@@ -1,3 +1,5 @@
+//! Tracks per-run step budgets and agent delegation provenance.
+
 use serde::{Deserialize, Serialize};
 use trace_lang_core::TraceErr;
 

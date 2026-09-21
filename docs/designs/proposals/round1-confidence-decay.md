@@ -8,37 +8,37 @@ depends_on: []
 source: docs/ideas/FEATURES.md and conversation rounds 2-6
 ---
 
-# Confidence decay
+## Confidence decay
 
-## Problem
+### Problem
 
 A step's confidence score is a snapshot; nothing distinguishes 'confident and current' from 'confident and stale.'
 
-## Approach
+### Approach
 
 Optional `DecayCurve { half_life }` attached per-step via `Step::with_decay()`; `Trace::confidence_at(at: DateTime<Utc>)` computes exponential decay from `started_at`. Steps with no decay curve never decay (default, additive).
 
-## API sketch
+### API sketch
 
 `struct DecayCurve { half_life: Duration }`; `impl Step { fn with_decay(mut self, half_life: Duration) -> Self }`; `impl<T> Trace<T> { fn confidence_at(&self, at: DateTime<Utc>) -> f64; fn low_confidence_below_at(&self, threshold: f64, at: DateTime<Utc>) -> Vec<&Step> }`
 
-## Integration
+### Integration
 
 Step.confidence: Option<f64> and Step.started_at: DateTime<Utc> already exist (crates/core/src/step.rs) — this is mechanically a straightforward addition, same shape as low_confidence_below.
 
-## Verification notes
+### Verification notes
 
 Confirmed Step's real fields support this without new plumbing.
 
-## Notes
+### Notes
 
 See failure-learning-decay-reference (round 6) — coursers ships a real, tuned THRESHOLD-based decay model as an alternative reference implementation. Resolve whether threshold and exponential decay are two variants or whether one subsumes the other before implementing.
 
-## Prior art
+### Prior art
 
 Industry precedent (Hystrix, resilience4j, Polly, Envoy outlier detection, AWS SDK adaptive retry — none arxiv) consistently composes a threshold/counting *trigger* with a separate exponential *penalty/recovery* curve, rather than treating them as competing single mechanisms — supports shipping both a threshold-based and an exponential DecayCurve variant, not picking one.
 
-### Foundational (2022-2023) — establishes that self-reported LLM confidence is unreliable
+#### Foundational (2022-2023) — establishes that self-reported LLM confidence is unreliable
 
 - **Do Language Models Know When They Don't Know? / Language Models (Mostly) Know What They Know** (Kadavath et al., Anthropic, arXiv:2207.05221, 2022) — earliest large-scale study showing LLMs' internal probability estimates are reasonably calibrated in-distribution but degrade badly out-of-distribution and under free-form generation. Foundational motivation for any external calibration/decay layer.
 - **Just Ask for Calibration** (Tian, Mitchell, Zhou, Sharma, Rafailov, Yao, Finn, Manning, EMNLP 2023, arXiv:2305.14975) — shows RLHF-tuned models' raw token probabilities are poorly calibrated, but verbalized confidence is closer to calibrated (~50% ECE reduction on TriviaQA/SciQ/TruthfulQA). Useful baseline for what "ask the model its confidence" alone gets you before any decay/calibration is applied.
@@ -46,7 +46,7 @@ Industry precedent (Hystrix, resilience4j, Polly, Envoy outlier detection, AWS S
 - **SelfCheckGPT: Zero-Resource Black-Box Hallucination Detection** (Manakul, Liusie, Gales, arXiv:2303.08896, 2023) — uses divergence across repeated stochastic samples as a hallucination (low-confidence) signal with no external ground truth needed — a candidate mechanism for feeding real-time signal into confidence_at() without waiting on delayed ground truth.
 - **Confidence Calibration and Rationalization for LLMs via Multi-Agent Deliberation** (arXiv:2404.09127, 2024) — proposes Collaborative Calibration: multiple agents deliberate and group consensus recalibrates a single model's confidence post-hoc, training-free. Directly relevant as an external-signal source for confidence_at() adjustments, not just decay by elapsed time.
 
-### 2025-2026 — agentic-trajectory-specific work
+#### 2025-2026 — agentic-trajectory-specific work
 
 - **Trust Between AI Agents: Measuring Formation, Breakage, and Recovery** (arXiv:2606.14923, 2026) — empirically measures inter-agent trust via reduced verification behavior. Trust forms fast, breaks immediately on failure, and recovers *more slowly* than it forms. Critically: clustered failures sustain suspicion far longer than the same failure count spread over time — decay is not a clean function of elapsed time alone.
 - **DynaTrust: Defending Multi-Agent Systems Against Sleeper Agents via Dynamic Trust Graphs** (arXiv:2603.15661, 2026) — models trust as a continuously-evolving graph rather than a scalar decaying score, explicitly to prevent an agent from accumulating credit via good behavior and then defecting (a static/slowly-decaying score is exploitable this way).

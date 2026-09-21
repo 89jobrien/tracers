@@ -1,3 +1,5 @@
+//! Persists task-registry checkpoints in a single filesystem file.
+
 use super::CheckpointStore;
 use std::path::{Path, PathBuf};
 use trace_lang_core::TraceErr;

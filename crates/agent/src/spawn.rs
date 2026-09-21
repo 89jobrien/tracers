@@ -1,3 +1,5 @@
+//! Runs agents with fresh or inherited contexts and evaluates escalation hooks.
+
 use crate::agent::Agent;
 use crate::context::AgentContext;
 use crate::hooks::EscalationAction;

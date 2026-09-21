@@ -1,3 +1,5 @@
+//! Defines the agent execution contract and its lifecycle escalation hooks.
+
 use crate::context::AgentContext;
 use crate::hooks::EscalationAction;
 use async_trait::async_trait;

@@ -31,7 +31,7 @@ cd .claude/skills/run-tracers/smoke && cargo run --quiet
 
 Expected output (exits non-zero on any failure):
 
-```
+```text
 core: Trace ok — 1 step(s)
 agent: spawn ok — "hello, world! (from Alice)"
 runtime: join_all ok — 3 results

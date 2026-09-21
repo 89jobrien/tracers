@@ -1,3 +1,5 @@
+//! Defines declarative escalation actions returned by agent lifecycle hooks.
+
 use serde::{Deserialize, Serialize};
 use trace_lang_core::TraceErr;
 

@@ -1,3 +1,5 @@
+//! Runs one agent concurrently across an ordered set of inputs.
+
 use trace_lang_agent::{Agent, SpawnOutcome, spawn};
 
 // TODO: thread-parallel variant via `tokio::spawn` — needs `'static` agents

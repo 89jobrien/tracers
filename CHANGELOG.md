@@ -66,5 +66,3 @@ All notable changes to this project are documented in this file.
 - Expand coverage on every testing-philosophy dimension
 - Add property test for confidence_below
 - Add integration test against the real escalation chain fixture
-
-

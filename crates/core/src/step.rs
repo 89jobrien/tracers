@@ -1,3 +1,5 @@
+//! Defines execution steps, outcomes, and candidate branches recorded in traces.
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;

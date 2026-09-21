@@ -8,33 +8,34 @@ depends_on: []
 source: docs/ideas/FEATURES.md and conversation rounds 2-6
 ---
 
-# speculate_race — early-exit speculative branching
+## speculate_race — early-exit speculative branching
 
-## Problem
+### Problem
 
 speculate() runs every candidate to completion before picking a winner — wasteful when one candidate clears an acceptable bar quickly.
 
-## Approach
+### Approach
 
 Race candidates via FuturesUnordered + tokio::select!; cancel the rest once one crosses `threshold`; fall back to speculate()'s highest-confidence-wins if none do.
 
-## API sketch
+### API sketch
 
 `async fn speculate_race<I, O>(candidates: Vec<(String, Arc<dyn Agent<Input=I,Output=O>>)>, input: I, threshold: f64) -> Trace<O>`; requires new `BranchOutcome::Cancelled` variant alongside Taken/Rejected.
 
-## Integration
+### Integration
 
 Additive sibling to speculate() in tracers-runtime — same join_all-adjacent pattern, confirmed real and tested in crates/runtime/src/speculate.rs.
 
-## Verification notes
+### Verification notes
 
 speculate()'s existing confidence-fold logic and tie-breaking behavior confirmed via direct read and its passing test suite (ties_keep_first_candidate_in_order).
 
-## Notes
+### Notes
 
 BranchOutcome is a public enum used elsewhere (Branch, Trace::all_branches) — audit all match sites before adding Cancelled.
 
-## Prior art
+### Prior art
+
 No dedicated research agent was run for this one. The "race N futures, cancel the rest once one
 crosses a threshold" pattern is a standard concurrent-programming idiom (`FuturesUnordered` +
 `select!` in Rust, or `Promise.any`-with-early-exit in other ecosystems) — not something requiring

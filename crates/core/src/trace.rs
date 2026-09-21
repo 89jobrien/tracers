@@ -1,3 +1,5 @@
+//! Defines provenance-carrying trace values and stable trace references.
+
 use crate::error::TraceErr;
 use crate::step::{Branch, Step};
 use serde::{Deserialize, Serialize};
@@ -102,7 +104,7 @@ impl<T: Clone + Serialize> Trace<T> {
         self.steps.push(step);
     }
 
-    // ── Introspection ─────────────────────────────────────────────────────────
+    // Queries over recorded steps and candidate branches.
 
     /// Every step in the order they were executed.
     pub fn causal_chain(&self) -> &[Step] {

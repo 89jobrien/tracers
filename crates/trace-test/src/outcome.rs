@@ -17,7 +17,9 @@ use trace_lang_runtime::RunOutcome;
 /// bound, so the port carries the same constraint rather than deferring
 /// the error to every call site.
 pub trait TraceOutcome<O: Clone + Serialize> {
+    /// Borrows the execution trace carried by this outcome.
     fn trace(&self) -> &Trace<O>;
+    /// Borrows the ordered agent delegation chain carried by this outcome.
     fn delegation_chain(&self) -> &[String];
 }
 

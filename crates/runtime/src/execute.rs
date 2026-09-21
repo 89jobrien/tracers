@@ -1,3 +1,5 @@
+//! Follows registry-resolved escalations through a bounded delegation chain.
+
 use crate::registry::AgentRegistry;
 use serde::Serialize;
 use trace_lang_agent::{Agent, AgentContext, EscalationAction, SpawnOutcome, delegate, spawn};

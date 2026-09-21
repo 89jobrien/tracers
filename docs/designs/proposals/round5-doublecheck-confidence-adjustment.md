@@ -9,37 +9,38 @@ depends_on:
 source: docs/ideas/FEATURES.md and conversation rounds 2-6
 ---
 
-# godmode:doublecheck as a confidence-adjusting trace pass
+## godmode:doublecheck as a confidence-adjusting trace pass
 
-## Problem
+### Problem
 
 A step's confidence is purely self-reported; doublecheck already does adversarial claim verification but the two systems don't share data.
 
-## Approach
+### Approach
 
 `Step::with_doublecheck(result)` adjusts confidence by the supported/extracted claim ratio and records the adjustment explainably in notes.
 
-## API sketch
+### API sketch
 
 `struct DoublecheckResult { claims_extracted: usize, claims_supported: usize, claims_contradicted: usize, adversarial_flags: Vec<String> }`; `impl Step { fn with_doublecheck(mut self, result: DoublecheckResult) -> Self }`
 
-## Integration
+### Integration
 
 Concrete ground-truth source for confidence-calibration's previously-open 'where does ground truth come from' question.
 
-## Verification notes
+### Verification notes
 
 Confirmed godmode:doublecheck is real (used directly earlier in this conversation) with exactly the claim-extraction/verification report shape described.
 
-## Dependencies
+### Dependencies
 
 - confidence-calibration
 
-## Notes
+### Notes
 
 Most trace:: steps (a tool call, a delegation) don't have 'claims' in the sense doublecheck checks — scope this to LLM-generated factual output steps only, and consider gating it to already-low-confidence steps rather than running on every step given real per-call latency/token cost.
 
-## Prior art
+### Prior art
+
 Shares its research grounding with confidence-decay (round 1) — see that doc's Prior art section
 for the LLM-calibration literature (Kadavath, Tian et al., multi-agent-deliberation calibration,
 2026 agentic-calibration papers). No additional research was run specifically for this proposal

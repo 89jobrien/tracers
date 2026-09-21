@@ -32,6 +32,7 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
 **Run**: `cargo check -p tracers-runtime --features test-support`
 
 1. Edit `crates/runtime/Cargo.toml` from:
+
    ```toml
    [dependencies]
    tracers-core  = { path = "../core" }
@@ -47,7 +48,9 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
    [lints.rust]
    unexpected_cfgs = { level = "allow", check-cfg = ["cfg(kani)"] }
    ```
+
    to:
+
    ```toml
    [dependencies]
    tracers-core  = { path = "../core" }
@@ -66,6 +69,7 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
    [lints.rust]
    unexpected_cfgs = { level = "allow", check-cfg = ["cfg(kani)"] }
    ```
+
 2. Run: `cargo check -p tracers-runtime` (no features) → succeeds, `async-trait` unused
    is fine since nothing in `src/` references it yet.
 3. Run: `cargo check -p tracers-runtime --features test-support` → succeeds.
@@ -81,6 +85,7 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
 **Run**: `cargo nextest run -p tracers-runtime`
 
 1. Create `crates/runtime/src/fixtures.rs`:
+
    ```rust
    //! Real agent fixtures shared between this crate's own integration tests
    //! and downstream crates' tests (via the `test-support` feature) — a
@@ -178,7 +183,9 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
        }
    }
    ```
+
 2. Edit `crates/runtime/src/lib.rs`, add after the existing `pub mod speculate;` line:
+
    ```rust
    pub mod execute;
    pub mod join;
@@ -197,9 +204,11 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
    pub use registry::AgentRegistry;
    pub use speculate::speculate;
    ```
+
 3. Edit `crates/runtime/tests/escalation_wiring.rs`: delete the `Guesser`, `Careful`,
    `Expert` struct/impl blocks (everything between the file's doc comment block and the
    first `#[tokio::test]`), and change the imports from:
+
    ```rust
    use async_trait::async_trait;
    use std::sync::Arc;
@@ -207,7 +216,9 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
    use tracers_core::{Step, Trace, TraceErr};
    use tracers_runtime::{AgentRegistry, run_with_escalation};
    ```
+
    to:
+
    ```rust
    use std::sync::Arc;
    use tracers_agent::EscalationAction;
@@ -215,6 +226,7 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
    use tracers_runtime::fixtures::{Careful, Expert, Guesser};
    use tracers_runtime::{AgentRegistry, run_with_escalation};
    ```
+
    (drop `async_trait`, `Agent`, `Step`, `Trace` imports — no longer directly used in this
    file; the three `#[tokio::test]` fns below are unchanged.)
 4. Run: `cargo nextest run -p tracers-runtime` → all tests pass, including the 3
@@ -232,6 +244,7 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
 **Run**: `cargo check -p tracers-trace-test`
 
 1. Create `crates/trace-test/Cargo.toml`:
+
    ```toml
    [package]
    name        = "tracers-trace-test"
@@ -257,11 +270,13 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
    [features]
    test-support = []
    ```
+
    Note: `tracers-runtime` appears in both `[dependencies]` (for `RunOutcome`) and
    `[dev-dependencies]` with `test-support` enabled (for `fixtures` in the integration
    test) — Cargo merges these into one dependency with the union of features when
    building tests, which is the correct outcome here.
 2. Create `crates/trace-test/src/lib.rs`:
+
    ```rust
    //! `trace-test` — assert the *shape* of an agent execution, not just its
    //! final output. `assert_trace!` inspects `Trace::causal_chain()` and
@@ -274,26 +289,34 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
    pub use assertion::{TraceAssertionError, confidence_below, contains_step, escalates_to, never_step};
    pub use outcome::TraceOutcome;
    ```
+
 3. Create empty placeholder modules so the crate compiles before Tasks 4-6 fill them in:
    `crates/trace-test/src/outcome.rs`:
+
    ```rust
    //! The `TraceOutcome` port — placeholder, filled in by the next task.
    ```
+
    `crates/trace-test/src/assertion.rs`:
+
    ```rust
    //! `assert_trace!` and the four assertion primitives — placeholder,
    //! filled in by the next task.
    ```
+
    (Task 3's `lib.rs` re-exports above will fail to compile against these placeholders —
    that's expected and resolved within this same task by deferring the re-export lines
    until Task 5/6. For this task, write `lib.rs` as just:
+
    ```rust
    pub mod assertion;
    pub mod outcome;
    ```
+
    without the `pub use` re-export line yet; Task 6 adds it.)
 4. Edit root `Cargo.toml`, `[workspace] members` array — add `"crates/trace-test"` after
    `"crates/runtime"`:
+
    ```toml
    members = [
        "crates/core",
@@ -306,8 +329,10 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
        # inspecting trace checkpoints (see CLAUDE.md "planned crates").
    ]
    ```
+
 5. Edit `taskit.toml`, `[workspace] crates` array — add an entry after the `runtime`
    entry:
+
    ```toml
    crates = [
      { dir = "crates/core", pkg = "tracers-core" },
@@ -317,8 +342,10 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
      { dir = "crates/trace-test", pkg = "tracers-trace-test" },
    ]
    ```
+
    Then add two `[[workspace.propagation]]` entries after the existing
    `tracers-core -> [tracers-task, tracers-agent, tracers-runtime]` entry:
+
    ```toml
    [[workspace.propagation]]
    source = "tracers-core"
@@ -332,6 +359,7 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
    source = "tracers-runtime"
    dependents = ["tracers-trace-test"]
    ```
+
 6. Run: `cargo check -p tracers-trace-test` → succeeds (two placeholder modules, no
    re-exports yet).
 7. Run: `cargo check --workspace` → succeeds (workspace member registered correctly).
@@ -347,6 +375,7 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
 
 1. Write failing test in `crates/trace-test/src/outcome.rs` (appended at the bottom, in a
    `#[cfg(test)] mod tests` block):
+
    ```rust
    #[cfg(test)]
    mod tests {
@@ -363,11 +392,13 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
        }
    }
    ```
+
    Run: `cargo nextest run -p tracers-trace-test --features test-support -- outcome::tests`
    Expected: FAIL (compile error — `TraceOutcome` trait and impls don't exist yet, and
    `tracers_runtime::fixtures` isn't visible without the `test-support` feature on the
    `[dev-dependencies]` entry, which Task 3 already added).
 2. Implement `crates/trace-test/src/outcome.rs`:
+
    ```rust
    //! The `TraceOutcome` port — anything `assert_trace!` can inspect.
    //! Implemented for every outcome type in the workspace that carries a
@@ -420,12 +451,14 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
        );
    }
    ```
+
    Then add the test module from step 1 back at the bottom of the file (it references
    `super::*`, i.e. `TraceOutcome`, which now exists).
 3. Run: `cargo nextest run -p tracers-trace-test --features test-support -- outcome::tests`
    Expected: PASS.
 4. Write a second test for `RunOutcome` and for the conformance fn, appended to the same
    `mod tests` block:
+
    ```rust
    #[tokio::test]
    async fn run_outcome_exposes_trace_and_delegation_chain() {
@@ -453,6 +486,7 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
        assert_trace_outcome_contract(&outcome);
    }
    ```
+
 5. Run: `cargo nextest run -p tracers-trace-test --features test-support` → all 4 tests
    pass.
 6. Run: `cargo clippy -p tracers-trace-test --features test-support -- -D warnings` →
@@ -468,6 +502,7 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
 **Run**: `cargo nextest run -p tracers-trace-test --features test-support`
 
 1. Write failing tests in `crates/trace-test/src/assertion.rs`:
+
    ```rust
    #[cfg(test)]
    mod tests {
@@ -540,10 +575,12 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
        }
    }
    ```
+
    Run: `cargo nextest run -p tracers-trace-test --features test-support -- assertion::tests`
    Expected: FAIL (compile error — nothing implemented yet).
 2. Implement `crates/trace-test/src/assertion.rs` (above the `#[cfg(test)]` block from
    step 1):
+
    ```rust
    //! `assert_trace!` and the four shape-assertion primitives it expands to.
    //! Failures render `TraceAssertionError` via `miette`, embedding the
@@ -668,6 +705,7 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
        }
    }
    ```
+
 3. Run: `cargo nextest run -p tracers-trace-test --features test-support -- assertion::tests`
    Expected: all 8 tests PASS.
 4. Run: `cargo clippy -p tracers-trace-test --features test-support -- -D warnings` →
@@ -683,6 +721,7 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
 **Run**: `cargo nextest run -p tracers-trace-test --features test-support`
 
 1. Append to the `#[cfg(test)] mod tests` block in `crates/trace-test/src/assertion.rs`:
+
    ```rust
    struct FakeOutcome(tracers_core::Trace<()>);
 
@@ -713,6 +752,7 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
        }
    }
    ```
+
    Run: `cargo nextest run -p tracers-trace-test --features test-support -- confidence_below_matches_manual_comparison`
    Expected: FAIL initially only if `FakeOutcome` name collides or `Step.confidence` field
    isn't public — it is (`crates/core/src/step.rs` has `pub confidence: Option<f64>`), so
@@ -732,6 +772,7 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
 **Run**: `cargo nextest run -p tracers-trace-test --features test-support`
 
 1. Write failing test, appended to `crates/trace-test/src/assertion.rs`'s test module:
+
    ```rust
    #[tokio::test]
    async fn assert_trace_macro_runs_all_checks_and_panics_on_first_failure() {
@@ -753,10 +794,12 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
        });
    }
    ```
+
    Run: `cargo nextest run -p tracers-trace-test --features test-support -- assert_trace_macro`
    Expected: FAIL (compile error — macro doesn't exist yet).
 2. Add the macro to the top of `crates/trace-test/src/assertion.rs`, immediately after
    the module doc comment and before `use crate::outcome::TraceOutcome;`:
+
    ```rust
    /// Assert the shape of an agent execution — which steps ran, at what
    /// confidence, whether it escalated to a specific agent, whether some
@@ -775,7 +818,9 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
        };
    }
    ```
+
 3. Edit `crates/trace-test/src/lib.rs` to its final form:
+
    ```rust
    //! `trace-test` — assert the *shape* of an agent execution, not just its
    //! final output. `assert_trace!` inspects `Trace::causal_chain()` and
@@ -788,6 +833,7 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
    pub use assertion::{TraceAssertionError, confidence_below, contains_step, escalates_to, never_step};
    pub use outcome::TraceOutcome;
    ```
+
 4. Run: `cargo nextest run -p tracers-trace-test --features test-support -- assert_trace_macro`
    Expected: both tests PASS.
 5. Run: `cargo nextest run -p tracers-trace-test --features test-support` → full crate
@@ -805,6 +851,7 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
 **Run**: `cargo nextest run -p tracers-trace-test --features test-support`
 
 1. Write failing test — create `crates/trace-test/tests/escalation_shape.rs`:
+
    ```rust
    //! Integration test: `assert_trace!` against the real
    //! `Guesser -> Careful -> Expert` escalation chain from
@@ -845,6 +892,7 @@ final `Trace` value. See `docs/designs/2026-08-16-trace-shape-testing-design.md`
        });
    }
    ```
+
    Run: `cargo nextest run -p tracers-trace-test --features test-support --test escalation_shape`
    Expected: depends on whether Tasks 1-7 landed correctly — if the crate builds, both
    tests should PASS immediately since they exercise already-implemented, already-tested

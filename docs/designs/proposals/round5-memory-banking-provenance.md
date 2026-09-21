@@ -9,37 +9,38 @@ depends_on:
 source: docs/ideas/FEATURES.md and conversation rounds 2-6
 ---
 
-# Provenance-backed godmode:memory-banking
+## Provenance-backed godmode:memory-banking
 
-## Problem
+### Problem
 
 godmode's memory-bank entries are prose summaries with no link back to the trace (if any) that established a given fact — a wrong entry has no traceable origin.
 
-## Approach
+### Approach
 
 `MemoryBankEntry { fact, source: Option<TraceRef>, confidence: Option<f64> }` — additive, optional provenance, not a requirement for every entry.
 
-## API sketch
+### API sketch
 
 `struct MemoryBankEntry { fact: String, source: Option<TraceRef>, confidence: Option<f64> }`
 
-## Integration
+### Integration
 
 TraceArchive is the natural backing store for what source: Some(TraceRef) points into.
 
-## Verification notes
+### Verification notes
 
 Confirmed godmode:memory-banking exists as a real skill (.ctx/memory-bank/, prompt injection via lifecycle hooks).
 
-## Dependencies
+### Dependencies
 
 - trace-archive
 
-## Notes
+### Notes
 
 Most memory-bank entries will continue to come from ordinary LLM summarization, not trace:: runs specifically — a mostly-None source field may feel like dead weight; the value is concentrated in the trace::-originated subset.
 
-## Prior art
+### Prior art
+
 No dedicated research agent was run for this one — this is an internal-integration proposal
 between two local, already-owned systems (a proposed TraceArchive and the real godmode
 memory-banking skill). Provenance-linking a summarized fact back to its source is conceptually

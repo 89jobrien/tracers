@@ -1,3 +1,5 @@
+//! Stores dependency-aware tasks and persists their graph through checkpoints.
+
 use crate::checkpoint::CheckpointStore;
 use crate::task::Task;
 use serde::{Deserialize, Serialize};
@@ -32,7 +34,7 @@ impl TaskRegistry {
         serde_json::from_str(&raw).map_err(|e| TraceErr::Serde(e.to_string()))
     }
 
-    // ── Mutation ──────────────────────────────────────────────────────────────
+    // Task insertion, lookup, and completion transitions.
 
     /// Insert a task, overwriting any existing task with the same `id`.
     pub fn insert(&mut self, task: Task) {
@@ -62,7 +64,7 @@ impl TaskRegistry {
         self.save(store)
     }
 
-    // ── Querying ──────────────────────────────────────────────────────────────
+    // Filtered and priority-ordered task views.
 
     /// Tasks whose dependencies are all `Done` and whose status is `Pending`.
     /// A task with an empty `depends_on` is vacuously satisfied.
@@ -100,7 +102,7 @@ impl TaskRegistry {
         self.tasks.len()
     }
 
-    // ── Serialization ─────────────────────────────────────────────────────────
+    // Checkpoint persistence.
 
     /// Persist the full registry through `store`. Called after every task
     /// transition so the pipeline is always resumable.

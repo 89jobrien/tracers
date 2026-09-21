@@ -1,3 +1,5 @@
+//! Defines serializable tasks, lifecycle states, dependencies, and priorities.
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use trace_lang_core::{TraceErr, TraceRef};

@@ -8,35 +8,35 @@ depends_on: []
 source: docs/ideas/FEATURES.md and conversation rounds 2-6
 ---
 
-# Trace-shape testing
+## Trace-shape testing
 
-## Problem
+### Problem
 
 Testing an agent today only asserts on final output — an agent can get the right answer for the wrong reason and no test catches it.
 
-## Approach
+### Approach
 
 `assert_trace!` macro/builder over Trace::causal_chain() with contains_step/confidence_below/escalates_to/never_step assertions.
 
-## API sketch
+### API sketch
 
 `#[trace_test]` attribute; `assert_trace!(outcome.trace, { contains_step("search"); confidence_below("search", 0.5); escalates_to("HumanReviewer"); never_step("publish"); })`
 
-## Integration
+### Integration
 
 New trace-test dev-dependency crate depending on tracers-core/tracers-agent. Runs against SpawnOutcome<O> and RunOutcome<O>.
 
-## Verification notes
+### Verification notes
 
 Confirmed SpawnOutcome{trace,context,escalation} and RunOutcome{trace,context,unresolved} are real (crates/agent/src/spawn.rs, crates/runtime/src/execute.rs), and AgentContext.delegation_chain is a real pub Vec<String> — escalates_to() is a direct field check, not speculative.
 
-## Notes
+### Notes
 
 Cheapest, most self-contained proposal in round three. Ship early.
 
-## Prior art
+### Prior art
 
-- **QuickCheck** (Claessen &amp; Hughes, ICFP 2000, https://dl.acm.org/doi/pdf/10.1145/636517.636527) — the foundational property-based-testing paper. This proposal's `assert_trace!` is conceptually much closer to a property-based-testing assertion (an invariant checked over the space of possible execution traces) than to classical example-based testing. Its stateful/model-based-testing extension (carried forward into Hypothesis's `RuleBasedStateMachine` and proptest's `proptest-state-machine`) generates *sequences of operations* and checks invariants over the resulting execution trace against a reference model — the direct academic precedent for asserting shape over a trace rather than only a final value.
+- **QuickCheck** (Claessen &amp; Hughes, ICFP 2000, <https://dl.acm.org/doi/pdf/10.1145/636517.636527>) — the foundational property-based-testing paper. This proposal's `assert_trace!` is conceptually much closer to a property-based-testing assertion (an invariant checked over the space of possible execution traces) than to classical example-based testing. Its stateful/model-based-testing extension (carried forward into Hypothesis's `RuleBasedStateMachine` and proptest's `proptest-state-machine`) generates *sequences of operations* and checks invariants over the resulting execution trace against a reference model — the direct academic precedent for asserting shape over a trace rather than only a final value.
 - **A Trace-Based Assurance Framework for Agentic AI Orchestration** (Paduraru, Bouruc, Stefanescu, arXiv:2603.18096, 2026) — strong independent corroboration: this paper proposes formal contracts validated against execution traces (verifying escalation fires when confidence thresholds are breached, correct step sequencing, governance compliance across the whole path) — essentially this exact proposal, published independently. This is real evidence the design direction is sound and not idiosyncratic to this project.
 - **"When Tools Fail: Benchmarking Dynamic Replanning and Anomaly Recovery in LLM Agents"** (arXiv:2606.05806, 2026) — benchmarks whether agents replan/recover correctly under tool failure, directly relevant to what escalates_to()/never_step() assertions would be checking in practice.
 

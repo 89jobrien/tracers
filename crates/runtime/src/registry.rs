@@ -1,3 +1,5 @@
+//! Maps delegation target names to type-compatible agent instances.
+
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;

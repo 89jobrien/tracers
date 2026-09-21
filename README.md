@@ -1,4 +1,4 @@
-# trace::
+# trace
 
 > a programming language where reasoning is first-class
 
@@ -95,7 +95,7 @@ buffer for tests) without touching registry code.
 
 ### language design
 
-```
+```text
 agent Planner {
   goal: "decompose a task into concrete, assignable steps"
   confidence: 0.8
@@ -204,7 +204,7 @@ open follow-ups rather than silently assumed.
 
 ## branching
 
-```
+```text
 // value branching — every arm recorded in the trace
 branch doc.word_count {
     0       => reject("empty document"),

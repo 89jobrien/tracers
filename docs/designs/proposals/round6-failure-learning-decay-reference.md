@@ -9,41 +9,41 @@ depends_on:
 source: docs/ideas/FEATURES.md and conversation rounds 2-6
 ---
 
-# Failure-learning as confidence decay's reference implementation
+## Failure-learning as confidence decay's reference implementation
 
-## Problem
+### Problem
 
 confidence-decay (round one) left the decay curve shape as an open design question; coursers already ships a working, tuned answer to a closely related problem.
 
-## Approach
+### Approach
 
 Reuse coursers' failure_learning config (window_seconds, block_threshold, cleanup_after_seconds) as a threshold-based DecayCurve variant, alongside (not necessarily replacing) round one's exponential half-life sketch.
 
-## API sketch
+### API sketch
 
 `struct DecayCurve { window: Duration, block_threshold: usize, cleanup_after: Duration }` (threshold-based, distinct from the exponential half-life variant)
 
-## Integration
+### Integration
 
 Directly resolves confidence-decay's open question about decay curve shape and default parameters using values already tuned through real production use.
 
-## Verification notes
+### Verification notes
 
 CONFIRMED via direct read of ~/dev/coursers/README.md: the exact config schema and default values (block_threshold: 3, window_seconds: 300, cleanup_after_seconds: 3600, max_tracked_commands: 200) are real and match the proposal precisely.
 
-## Dependencies
+### Dependencies
 
 - confidence-decay
 
-## Notes
+### Notes
 
 Best-grounded proposal across all six rounds — not just plausible, the exact tuned constants exist. Important correction: this is threshold-based BLOCKING, not continuous decay — Step::confidence staying a smooth float doesn't map onto 'blocked after N failures.' Treat as a second, separate DecayCurve variant rather than assuming one model subsumes the other.
 
-## Prior art
+### Prior art
 
 Non-arxiv industry precedent is the stronger grounding here: Hystrix, resilience4j, and Polly circuit breakers are all fundamentally sliding-window count/ratio thresholds, the same family as coursers' failure_learning — none of them use continuous exponential decay as the primary trip signal. One concrete gap this proposal should fix relative to that precedent: Hystrix's `requestVolumeThreshold`, resilience4j's `minimumNumberOfCalls`, and Polly's `MinimumThroughput` all guard against tripping on a low-sample-size false positive (e.g. 3 failures out of 3 attempts vs. 3 out of 300) — coursers' raw `block_threshold` count has no equivalent minimum-volume gate. Worth adding one when generalizing this beyond coursers' narrow shell-command use case.
 
-### Trust/reputation decay literature (2022-2026)
+#### Trust/reputation decay literature (2022-2026)
 
 - **An analysis of the exponential decay principle in probabilistic trust models** (ElSalamouny, Krukow, Sassone, *Theoretical Computer Science* 410(41), 2009 — not arxiv, pre-2022 but the only rigorous formal treatment found) — models principal behavior with Hidden Markov Models and derives an analytical error bound for exponential decay applied to Beta-distribution trust estimates. Frames decay as a bias/variance tradeoff (a fixed-form approximation to more complex dynamics), not a proof that exponential decay is optimal — relevant caveat against assuming exponential decay is automatically "more correct" than a tuned threshold model like coursers'.
 - **A Survey of Multi-Agent Trust Management Systems** (Granatyr et al., ACM Computing Surveys / IEEE) — confirms temporal decay is a standard, expected component of MAS trust models generally, without adjudicating which decay-model family is superior.
